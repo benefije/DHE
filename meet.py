@@ -88,7 +88,7 @@ def meet(fighter):
 
 	# init video
 	cameraProxy = ALProxy("ALVideoDevice", IP, PORT)
-	resolution = 1    # 0 : QQVGA, 1 : QVGA, 2 : VGA
+	resolution = 0    # 0 : QQVGA, 1 : QVGA, 2 : VGA
 	colorSpace = 11   # RGB
 	camNum = 0 # 0:top cam, 1: bottom cam
 	fps = 1; # frame Per Second
@@ -100,7 +100,7 @@ def meet(fighter):
 		cameraProxy.unsubscribe("python_client")
 		videoClient = cameraProxy.subscribe("python_client", 
 														resolution, colorSpace, fps)
-	print "videoClient ",videoClient
+	print "Start videoClient: ",videoClient
 	# Get a camera image.
 	# image[6] contains the image data passed as an array of ASCII chars.
 	naoImage = cameraProxy.getImageRemote(videoClient)
@@ -206,10 +206,12 @@ def meet(fighter):
 					motionProxy.moveTo(um, 0.0, 0.0)
 					tu = time.time()
 				else:
-					# quand il est proche mettre K=1, on admet qu il n y a plus de parasites
+					# quand il est proche mettre K=1, on admet qu il n y a plus de parasites, et que les zones oranges sont assez 
+					# grosse pour leur appliquer un coef ce fermeture eleve
 					# print "-------------------------"
 					# print "K = 1"
 					K=1
+					closing = 5
 					tstp = time.time()
 				#print l,r		
 				#Temps de repos du Nao
@@ -218,7 +220,7 @@ def meet(fighter):
 				if tact>5:
 					found=False
 					if fighter=="dark":
-						tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now *I* am the master.")
+						tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
 						time.sleep(1.0)
 					if fighter=="obi":
 						time.sleep(15.0)
