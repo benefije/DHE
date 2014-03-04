@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+@author: quentin
+@descript: We meet again, at last.
+"""
+
 import sys
 import time
 import cv,cv2
@@ -70,7 +76,6 @@ def clustering(data,cvImg,nframe,error,K=2):
 			pcterror = (error/nframe)*100.0
 			#print "current error of kmeans = ",pcterror,"%"          	
 	return cvImg,error,centroid, labels
-
 
 def meet(fighter):
 	global motionProxy
@@ -190,11 +195,11 @@ def meet(fighter):
 				l=memoryProxy.getData("Device/SubDeviceList/US/Left/Sensor/Value")
 				r=memoryProxy.getData("Device/SubDeviceList/US/Right/Sensor/Value")
 				# Commande proportionnelles pour le cap et la distance
-				kh = 30.0/(imageWidth/2)
+				kh = 20.0/(imageWidth/2)
 				km = 0.2
 				uh = -kh*(x - imageWidth/2)
 				um =  km*(math.sqrt(l**2+r**2) - 0.5)
-				if (uh>5 or uh<-5):
+				if (uh>4 or uh<-4):
 					motionProxy.moveTo(0.0, 0.0, uh*almath.TO_RAD)
 					tu = time.time()
 				if (l>0.5 and r>0.5):
@@ -202,8 +207,8 @@ def meet(fighter):
 					tu = time.time()
 				else:
 					# quand il est proche mettre K=1, on admet qu il n y a plus de parasites
-					print "-------------------------"
-					print "K = 1"
+					# print "-------------------------"
+					# print "K = 1"
 					K=1
 					tstp = time.time()
 				#print l,r		
@@ -237,9 +242,6 @@ def meet(fighter):
 		print "Interrupted by user, shutting down" 
 		cameraProxy.unsubscribe(videoClient)
 		sys.exit(0)
-
-
-
 
 if __name__ == "__main__":
 	IP = "172.20.12.26"
