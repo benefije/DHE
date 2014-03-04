@@ -196,13 +196,13 @@ def meet(fighter):
 				r=memoryProxy.getData("Device/SubDeviceList/US/Right/Sensor/Value")
 				# Commande proportionnelles pour le cap et la distance
 				kh = 20.0/(imageWidth/2)
-				km = 0.2
+				km = 0.25
 				uh = -kh*(x - imageWidth/2)
-				um =  km*(math.sqrt(l**2+r**2) - 0.5)
+				um =  km*(math.sqrt(l**2+r**2) - 0.6)
 				if (uh>4 or uh<-4):
 					motionProxy.moveTo(0.0, 0.0, uh*almath.TO_RAD)
 					tu = time.time()
-				if (l>0.5 and r>0.5):
+				if (um>0.03 or um<-0.03) and (l>0.6 and r>0.6):
 					motionProxy.moveTo(um, 0.0, 0.0)
 					tu = time.time()
 				else:
@@ -213,19 +213,33 @@ def meet(fighter):
 					K=1
 					closing = 5
 					tstp = time.time()
-				#print l,r		
+				print "l",l
+				print "r",r
+				print "um ",um	
 				#Temps de repos du Nao
 				tact = tstp - tu
 				#S'il attend plus de 5sec, il admet qu'il est devant sa cible
 				if tact>5:
 					found=False
-					if fighter=="dark":
-						tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
-						time.sleep(1.0)
-					if fighter=="obi":
-						time.sleep(15.0)
-						tts.say("Only a master of evil, Darth.")
+					# if fighter=="dark":
+					# 	tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
+					# 	time.sleep(1.0)
+					# if fighter=="obi":
+					# 	time.sleep(15.0)
+					# 	tts.say("Only a master of evil, Darth.")
+					pNames = "Body"
+					time.sleep(5.0)
 					post.goToPosture("Crouch", 1.0)
+					time.sleep(1.0)
+					pStiffnessLists = 0.0
+					pTimeLists = 1.0
+					proxy = ALProxy("ALMotion",IP, 9559)
+					proxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
+					#tts.say("exit")
+					print
+					print "Interrupted by user, shutting down" 
+					cameraProxy.unsubscribe(videoClient)
+					sys.exit(0)
 
 			cv.ShowImage("Real",cvImg)
 			cv.ShowImage("Threshold",thresholded_img2)
