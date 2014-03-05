@@ -105,7 +105,7 @@ def meet(fighter):
 
 	# init video
 	cameraProxy = ALProxy("ALVideoDevice", IP, PORT)
-	resolution = 0    # 0 : QQVGA, 1 : QVGA, 2 : VGA
+	resolution = 1    # 0 : QQVGA, 1 : QVGA, 2 : VGA
 	colorSpace = 11   # RGB
 	camNum = 0 # 0:top cam, 1: bottom cam
 	fps = 1; # frame Per Second
@@ -135,7 +135,7 @@ def meet(fighter):
 	cv.MoveWindow("Real",imageWidth+100,0)
 	error=0.0
 	nframe=0.0
-	closing = 3
+	closing = 1
 	tstp,tu=0,0
 	K=2
 	try:
@@ -157,97 +157,97 @@ def meet(fighter):
 			cv.CvtColor(cvImg, hsv_img, cv.CV_BGR2HSV)
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			thresholded_img2 =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
+			temp =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
+			eroded =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
+			skel = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
+			img = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			# Get the orange on the image
-			cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img)
-			cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img2)
+			cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img)
+			#cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img2)
 			storage = cv.CreateMemStorage(0)
-			contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
-			cv.Smooth(thresholded_img, thresholded_img, cv.CV_GAUSSIAN, 5, 5)
-			cv.Erode(thresholded_img,thresholded_img, None, closing)
-			cv.Dilate(thresholded_img,thresholded_img, None, closing)
+			#contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
+			#cv.Smooth(thresholded_img, thresholded_img, cv.CV_GAUSSIAN, 3, 3)
+			# cv.Erode(thresholded_img,thresholded_img, None, closing)
+			# cv.Dilate(thresholded_img,thresholded_img, None, closing)
+			# cv.CvtColor(thresholded_img, thresholded_img, cv.CV_HSV2BGR)
+			# cv.CvtColor(thresholded_img, thresholded_img, cv.CV_BGR2GRAY)
+			# cv.Sobel(thresholded_img, thresholded_img, 1, 0, apertureSize=3)
+			# cv.Canny(thresholded_img, thresholded_img, threshold1, threshold2, aperture_size=3)
+			
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 100, param1=0, param2=0) 
+			for l in lines:
+				ro = l[0]
+				theta = l[1]
+				print ro,theta
+
+
+			# cv.Smooth(thresholded_img2, thresholded_img2, cv.CV_GAUSSIAN, 3, 3)
+			# cv.Erode(thresholded_img2,thresholded_img2, None, closing)
+			# cv.Dilate(thresholded_img2,thresholded_img2, None, closing)
+
+			size = np.size(cvImg)
+
+
+			element = cv2.getStructuringElement(cv2.MORPH_CROSS,(3,3))
+			done = False
+			t=0
+			array = np.array(cvImg)
+			# while( t<10):
+			#     cv.Erode(thresholded_img,eroded, None, closing)
+			#     cv.Erode(thresholded_img,img, None, closing)
+			#     cv.Dilate(thresholded_img,temp, None, closing)
+
+			#     cv.Sub(thresholded_img, temp, temp, mask=None)
+			#     cv.Or(skel, temp, skel, mask=None)
+
+			#     zeros = size - cv.CountNonZero(img)
+			#     t=t+1
+			#     #print zeros
+			#     if zeros==size:
+			#         done = True
+
 			
 
-			storage = cv.CreateMemStorage(0)
-			contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
-			points = [] 
+			# storage = cv.CreateMemStorage(0)
+			# contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
+			# points = [] 
 
-			d=[]
-			data=[]
-			while contour:			
-				# Draw bounding rectangles
-				bound_rect = cv.BoundingRect(list(contour))
-				contour = contour.h_next()
-				# for more details about cv.BoundingRect,see documentation
-				pt1 = (bound_rect[0], bound_rect[1])
-				pt2 = (bound_rect[0] + bound_rect[2], bound_rect[1] + bound_rect[3])
-				points.append(pt1)
-				points.append(pt2)
-				cv.Rectangle(cvImg, pt1, pt2, cv.CV_RGB(255,0,0), 1)
-				lastx=posx
-				lasty=posy
-				posx=cv.Round((pt1[0]+pt2[0])/2)
-				posy=cv.Round((pt1[1]+pt2[1])/2)
-				data.append([posx,posy])
-				d.append(math.sqrt(pt1[0]**2+pt2[0]**2))
-				d.append(math.sqrt(pt1[1]**2+pt2[1]**2))
+			# d=[]
+			# data=[]
+			# while contour:			
+			# 	# Draw bounding rectangles
+			# 	bound_rect = cv.BoundingRect(list(contour))
+			# 	contour = contour.h_next()
+			# 	# for more details about cv.BoundingRect,see documentation
+			# 	pt1 = (bound_rect[0], bound_rect[1])
+			# 	pt2 = (bound_rect[0] + bound_rect[2], bound_rect[1] + bound_rect[3])
+			# 	points.append(pt1)
+			# 	points.append(pt2)
+			# 	cv.Rectangle(cvImg, pt1, pt2, cv.CV_RGB(255,0,0), 1)
+			# 	lastx=posx
+			# 	lasty=posy
+			# 	posx=cv.Round((pt1[0]+pt2[0])/2)
+			# 	posy=cv.Round((pt1[1]+pt2[1])/2)
+			# 	data.append([posx,posy])
+			# 	d.append(math.sqrt(pt1[0]**2+pt2[0]**2))
+			# 	d.append(math.sqrt(pt1[1]**2+pt2[1]**2))
 
-			cvImg,error,centroid,labels = clustering(data,cvImg,nframe,error,K)
-			# Update the closing size towards the number of found labels
-			if labels.size<2:
-				closing=1
-			if labels.size<6:
-				closing = 2
-			if labels.size>10:
-				closing=3
-			if closing < 1:
-				closing = 0
-			if centroid.size!=0:
+			# cvImg,error,centroid,labels = clustering(data,cvImg,nframe,error,K)
+			# # Update the closing size towards the number of found labels
+			# if labels.size<2:
+			# 	closing=1
+			# if labels.size<6:
+			# 	closing = 2
+			# if labels.size>10:
+			# 	closing=3
+			# if closing < 1:
+			# 	closing = 0
 		
-				uh = 0
-				try:
-					x = int(centroid[0][0])
-					y = int(centroid[0][1])
-				except:
-					print "NaN"
-				l=memoryProxy.getData("Device/SubDeviceList/US/Left/Sensor/Value")
-				r=memoryProxy.getData("Device/SubDeviceList/US/Right/Sensor/Value")
-				# Commande proportionnelles pour le cap et la distance
-				kh = 20.0/(imageWidth/2)
-				km = 0.25
-				uh = -kh*(x - imageWidth/2)
-				um =  km*(math.sqrt(l**2+r**2) - 0.6)
-				if (uh>4 or uh<-4):
-					motionProxy.moveTo(0.0, 0.0, uh*almath.TO_RAD)
-					tu = time.time()
-				if (um>0.03 or um<-0.03) and (l>0.6 and r>0.6):
-					motionProxy.moveTo(um, 0.0, 0.0)
-					tu = time.time()
-				else:
-					# quand il est proche mettre K=1, on admet qu il n y a plus de parasites, et que les zones oranges sont assez 
-					# grosse pour leur appliquer un coef ce fermeture eleve
-					# print "-------------------------"
-					# print "K = 1"
-					K=1
-					closing = 5
-					tstp = time.time()
-				print "l",l
-				print "r",r
-				print "um ",um	
-				#Temps de repos du Nao
-				tact = tstp - tu
-				#S'il attend plus de 5sec, il admet qu'il est devant sa cible
-				if tact>5:
-					found=False
-					# if fighter=="dark":
-					# 	tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
-					# 	time.sleep(1.0)
-					# if fighter=="obi":
-					# 	time.sleep(15.0)
-					# 	tts.say("Only a master of evil, Darth.")
-					end()
+				
 
 			cv.ShowImage("Real",cvImg)
-			cv.ShowImage("Threshold",thresholded_img2)
+			# cv.ShowImage("skel",skel)
+			cv.ShowImage("Threshold",thresholded_img)
 			cv.WaitKey(1)
 
 	except KeyboardInterrupt:
@@ -302,4 +302,4 @@ if __name__ == "__main__":
 	
 	init(IP,PORT)
 	#rockandload(fighter)
-	#meet(fighter)
+	meet(fighter)
