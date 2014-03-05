@@ -23,6 +23,23 @@ global post
 global sonarProxy
 global memoryProxy
 
+def rockandload(fighter):
+	global motionProxy
+	global post
+	if fighter=="obi":
+		tts.say("I need my blue lightsaber")
+	if fighter=="dark":
+		tts.say("I need my red lightsaber")
+	names  = ["RHand", "LHand"]
+	angles = [1,1]
+	fractionMaxSpeed  = 0.2
+	motionProxy.setAngles(names, angles, fractionMaxSpeed)
+	time.sleep(3)
+	angles = [0.15,0.15]
+	motionProxy.setAngles(names, angles, fractionMaxSpeed)
+	time.sleep(1)
+
+
 def clustering(data,cvImg,nframe,error,K=2):
 	flag1=0
 	flag2=0
@@ -32,7 +49,7 @@ def clustering(data,cvImg,nframe,error,K=2):
 	centroid, labels=np.array([]),np.array([])
 	if len(data)>1:
 		dataarray = np.asarray(data)
-		centroid, labels = kmeans.kMeans(dataarray, K, maxIters = 10, plot_progress = None)  
+		centroid, labels = kmeans.kMeans(dataarray, K, maxIters = 20, plot_progress = None)  
 		
 		try:
 			cv.Line(cvImg,(int(centroid[0][0]),int(centroid[0][1])),(int(centroid[1][0]),int(centroid[1][1])),(255,0,0))
@@ -227,37 +244,51 @@ def meet(fighter):
 					# if fighter=="obi":
 					# 	time.sleep(15.0)
 					# 	tts.say("Only a master of evil, Darth.")
-					pNames = "Body"
-					time.sleep(5.0)
-					post.goToPosture("Crouch", 1.0)
-					time.sleep(1.0)
-					pStiffnessLists = 0.0
-					pTimeLists = 1.0
-					proxy = ALProxy("ALMotion",IP, 9559)
-					proxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
-					#tts.say("exit")
-					print
-					print "Interrupted by user, shutting down" 
-					cameraProxy.unsubscribe(videoClient)
-					sys.exit(0)
+					end()
 
 			cv.ShowImage("Real",cvImg)
 			cv.ShowImage("Threshold",thresholded_img2)
 			cv.WaitKey(1)
 
 	except KeyboardInterrupt:
-		pNames = "Body"
-		post.goToPosture("Crouch", 1.0)
-		time.sleep(1.0)
-		pStiffnessLists = 0.0
-		pTimeLists = 1.0
-		proxy = ALProxy("ALMotion",IP, 9559)
-		proxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
-		#tts.say("exit")
 		print
 		print "Interrupted by user, shutting down" 
-		cameraProxy.unsubscribe(videoClient)
-		sys.exit(0)
+		end()
+
+def end():
+	global motionProxy
+	global post
+	global sonarProxy
+	global memoryProxy
+	pNames = "Body"
+	post.goToPosture("Crouch", 1.0)
+	time.sleep(1.0)
+	pStiffnessLists = 0.0
+	pTimeLists = 1.0
+	proxy = ALProxy("ALMotion",IP, 9559)
+	proxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
+	#tts.say("exit")
+	print
+	print "This is the END"
+	cameraProxy.unsubscribe(videoClient)
+	sys.exit(0)
+
+def init(IP,PORT):
+	global motionProxy
+	global tts
+	global post
+	global sonarProxy
+	global memoryProxy
+
+	post = ALProxy("ALRobotPosture", IP, PORT)
+	tts = ALProxy("ALTextToSpeech", IP, PORT)
+	motionProxy = ALProxy("ALMotion", IP, PORT)
+	sonarProxy = ALProxy("ALSonar", IP, PORT)
+	sonarProxy.subscribe("myApplication")
+	memoryProxy = ALProxy("ALMemory", IP, PORT)
+	post.goToPosture("StandInit", 1.0)
+	time.sleep(2)
+
 
 if __name__ == "__main__":
 	IP = "172.20.12.26"
@@ -268,16 +299,7 @@ if __name__ == "__main__":
 	if len(sys.argv) > 2:
 		IP = sys.argv[1]
 		fighter = sys.argv[2]
-	post = ALProxy("ALRobotPosture", IP, PORT)
-	tts = ALProxy("ALTextToSpeech", IP, PORT)
-	motionProxy = ALProxy("ALMotion", IP, PORT)
-	# Connect to ALSonar module.
-	sonarProxy = ALProxy("ALSonar", IP, 9559)
-	sonarProxy.subscribe("myApplication")
-	#Now you can retrieve sonar data from ALMemory.
-	memoryProxy = ALProxy("ALMemory", IP, 9559)
 	
-
-	post.goToPosture("StandInit", 1.0)
-	time.sleep(2)	
+	init(IP,PORT)
+	rockandload(fighter)
 	meet(fighter)
