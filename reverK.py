@@ -10,7 +10,6 @@ from math import *
 from numpy import *
 import numpy.linalg as nl
 
-
 """Denavit-Hartenberg Matrix"""
 def DH_mat(r, al, d, th):
     T1 = array([[cos(th), -sin(th)*cos(al), sin(th)*sin(al), r*cos(th)]])
@@ -32,7 +31,7 @@ def T_mat(p):
     ay = p[4]
     az = p[5]    
     
-    Rx = array([[1.,0.,0.],[0.,cos(ax),-sin(ax)],[0.,sin(ax),cos(ay)]])
+    Rx = array([[1.,0.,0.],[0.,cos(ax),-sin(ax)],[0.,sin(ax),cos(ax)]])
     Ry = array([[cos(ay),0.,sin(ay)],[0.,1.,0.],[-sin(ay),0.,cos(ay)]])
     Rz = array([[cos(az),-sin(az),0.],[sin(az),cos(az),0.],[0.,0.,1.]])
 
@@ -73,18 +72,34 @@ def exe_revK(pos):
     
     th1 = atan2(-Tp[2,3], Tp[0,3])
     T01 = DH_mat(0.,-pi/2,0.,th1)
-    Tpp = dot(nl.inv(T01),Tp)
+    T2p = dot(nl.inv(T01),Tp)
     
-    th2 = acos((l2*Tpp[0,3]-l1*Tp[2,3])/(l2*l2-l1*l1))
+    print (l2*T2p[0,3]-l1*T2p[2,3])/(l2*l2+l1*l1)
+    
+    #th2 = acos((l2*T2p[0,3]-l1*T2p[2,3])/(l2*l2+l1*l1))
+    th2 = atan2((l2+l1*T2p[0,3]/T2p[2,3]),(l2*T2p[0,3]/T2p[2,3]-l1))
     T12 = DH_mat(0.,pi/2,0.,th2-pi/2) #/!\ th2-pi/2
-    Tppp = dot(nl.inv(T12),Tpp)
+    T3p = dot(nl.inv(T12),T2p)
     
-    th3 = atan2(Tppp[2,2],Tppp[0,2])
+    th3 = atan2(T3p[2,2],T3p[0,2])
     T23 = DH_mat(0.,-pi/2,0.105,th3) 
-    Tpppp = dot(nl.inv(T23),Tppp)
+    T4p = dot(nl.inv(T23),T3p)
     
-    th4 = atan2(Tpppp[0,2],Tpppp[2,2])
-    th5 = atan2(Tpppp[1,0],Tpppp[1,1])
+    th4 = atan2(T4p[0,2],T4p[2,2])
+    th5 = atan2(T4p[1,0],T4p[1,1])
     
     th = [th1,th2,th3,th4,th5]
     return th
+
+"""Convert a set of coordinates for the sword into a set of coordinates
+for the NAO's hand.
+No rotations along y-axis nor z-axis.
+l-parameter is the sword length"""
+def mov_revK(pos, l):
+    al = pos[3]
+    px = pos[0]
+    py = pos[1]+l*cos(al)
+    pz = pos[2]+l*sin(al)
+    
+    dest = exe_revK([px,py,pz,al,0.,0.])
+    return dest
