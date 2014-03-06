@@ -19,7 +19,6 @@ from math import *
 from naoqi import ALProxy
 from naoqi import motion
 
-global backup
 
 """Convert a set of coordinates for the sword into a set of coordinates
 for the NAO's hand.
@@ -36,9 +35,9 @@ def sw_coord(pos, l):
 def max_error(pos, dest):  
     return max(abs(pos[0]-dest[0]),abs(pos[1]-dest[1]),abs(pos[2]-dest[2]),abs(pos[3]-dest[3]))
 
-def main(robotIP, position):
-    global backup
-    
+"""Compute the cartesian movement to make the sword to reach the target position
+If backup is put to true, it is a rescue execution after a failure"""
+def move(robotIP, position, backup):
     PORT = 9559
 
     try:
@@ -86,23 +85,19 @@ def main(robotIP, position):
     #if that havec ever occured, back to position and standing by
     if err_1>1:
         print "back to a better position"
-        main(robotIP,sw_coord([0.1,0.0,0.25,-1.57],0.2))
-    if backup==0:
-        print "try again
-        main(robotIp, sw_coord(position,0.2))
-        backup = 1
+        move(robotIP,sw_coord([0.1,0.0,0.25,-1.57],0.2),backup)
+        if backup==0:
+            print "try again" 
+            move(robotIp, sw_coord(position,0.2),1)
 
 
-if __name__ == "__main__":
-    global backup
-    
+if __name__ == "__main__":    
     robotIp = "172.20.11.131"
-    backup = 0
-
+    
     if len(sys.argv) <= 1:
         position         = [0.1,0.0,0.25,-1.57]
 
     else:
         position = eval('['+sys.argv[1]+']')
 
-    main(robotIp, sw_coord(position,0.2))
+    move(robotIp, sw_coord(position,0.2),0)
