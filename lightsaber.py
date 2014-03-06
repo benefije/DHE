@@ -161,6 +161,7 @@ def meet(fighter):
 			eroded =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			skel = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			img = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
+			edges = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			# Get the orange on the image
 			cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img)
 			#cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img2)
@@ -174,11 +175,26 @@ def meet(fighter):
 			# cv.Sobel(thresholded_img, thresholded_img, 1, 0, apertureSize=3)
 			# cv.Canny(thresholded_img, thresholded_img, threshold1, threshold2, aperture_size=3)
 			
-			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 100, param1=0, param2=0) 
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 120, param1=0, param2=0)
+
+			cv.Canny(thresholded_img, edges, 10, 100, aperture_size=3) 
+
 			for l in lines:
-				ro = l[0]
+				rho = l[0]
 				theta = l[1]
-				print ro,theta
+				print rho,theta
+				a = np.cos(theta)
+				b = np.sin(theta)
+				x0 = a*rho
+				y0 = b*rho
+				cf  = 1000
+				pt1 = (cv.Round(x0 + cf*(-b)) , cv.Round(y0 + cf*(a)))
+				pt2 = (cv.Round(x0 - cf*(-b)) , cv.Round(y0 - cf*(a)))
+				xm = cv.Round((pt2[0] - pt1[0])/2.0)
+				ym = cv.Round((pt2[1] - pt1[1])/2.0)
+				cv.Circle(cvImg,(xm,ym),5,(254,0,254),-1)
+				cv.Line(cvImg, pt1, pt2, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
+				print (xm,ym)
 
 
 			# cv.Smooth(thresholded_img2, thresholded_img2, cv.CV_GAUSSIAN, 3, 3)
@@ -245,7 +261,7 @@ def meet(fighter):
 		
 				
 
-			cv.ShowImage("Real",cvImg)
+			cv.ShowImage("Real",edges)
 			# cv.ShowImage("skel",skel)
 			cv.ShowImage("Threshold",thresholded_img)
 			cv.WaitKey(1)
