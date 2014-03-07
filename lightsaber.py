@@ -39,18 +39,34 @@ def rockandload(fighter):
 	motionProxy.setAngles(names, angles, fractionMaxSpeed)
 	time.sleep(1)
 
+def line_intersection(line1, line2):
+    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+    ydiff = (line1[0][1] - line2[1][1], line2[0][1] - line2[1][1])
+
+    def det(a, b):
+        return a[0] * b[1] - a[1] * b[0]
+
+    div = det(xdiff, ydiff)
+    if div == 0:
+       return False
+
+    d = (det(*line1), det(*line2))
+    x = det(d, xdiff) / div
+    y = det(d, ydiff) / div
+    return x, y
+
 
 def clustering(data,cvImg,nframe,error,K=2):
 	flag1=0
 	flag2=0
 	l0=0
 	l1=0
-	
+
 	centroid, labels=np.array([]),np.array([])
 	if len(data)>1:
 		dataarray = np.asarray(data)
 		centroid, labels = kmeans.kMeans(dataarray, K, maxIters = 20, plot_progress = None)  
-		
+
 		try:
 			cv.Line(cvImg,(int(centroid[0][0]),int(centroid[0][1])),(int(centroid[1][0]),int(centroid[1][1])),(255,0,0))
 			cv.Circle(cvImg,int(centroid[0][0]),int(centroid[0][1]),5,(0,255,0),-1)
@@ -174,14 +190,17 @@ def meet(fighter):
 			# cv.CvtColor(thresholded_img, thresholded_img, cv.CV_BGR2GRAY)
 			# cv.Sobel(thresholded_img, thresholded_img, 1, 0, apertureSize=3)
 			# cv.Canny(thresholded_img, thresholded_img, threshold1, threshold2, aperture_size=3)
-			tmp = cv.CreateImage(cv.GetSize(img),8,1)
-			tarray = np.asarray(cv.GetMat(tmp))
-			
-			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 150, param1=0, param2=0)
 
-			cv.Canny(thresholded_img, edges, 10, 100, aperture_size=3)
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 70, param1=0, param2=0)
+
+			#cv.Canny(thresholded_img, edges, 10, 100, aperture_size=3)
+			first = 1
+			sl=0
 			for l in lines:
-				xpt1,ypt1,xpt2,ypt2=0,0,0,0
+				sl=sl+1
+			# for l in lines:
+			if (sl)!=0:
+				l=lines[0]
 				rho = l[0]
 				theta = l[1]
 				print rho,theta
@@ -189,38 +208,71 @@ def meet(fighter):
 				b = np.sin(theta)
 				x0 = a*rho
 				y0 = b*rho
-				cf  = 500
-				print "size ",tarray.shape
-				while tarray[xpt1,ypt1]<50:
-					cf = cf - 10
-					xpt1 = abs(cv.Round(x0 + cf*(-b)))
-					ypt1 = abs(cv.Round(y0 + cf*(a)))
-					if ypt1>imageWidth-1:
-						ypt1=imageWidth-10
-					if xpt1>imageHeight-1:
-						xpt1=imageHeight-10
-				xpt2 = cv.Round(x0 - cf*(-b))
-				ypt2 = cv.Round(y0 - cf*(a))
+				cf1,cf2  = 300,300
+				xpt11 = int(cv.Round(x0 + cf1*(-b)))
+				ypt11 = int(cv.Round(y0 + cf1*(a)))
+				xpt12 = int(cv.Round(x0 - cf2*(-b)))
+				ypt12 = int(cv.Round(y0 - cf2*(a)))
+				pt11 = (xpt11,ypt11)
+				pt12 = (xpt12,ypt12)
+				cv.Line(cvImg, pt11, pt12, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
+
+				l=lines[sl-1]
+				rho = l[0]
+				theta = l[1]
+				print rho,theta
+				a = np.cos(theta)
+				b = np.sin(theta)
+				x0 = a*rho
+				y0 = b*rho
+				cf1,cf2  = 300,300
+				xpt1 = int(cv.Round(x0 + cf1*(-b)))
+				ypt1 = int(cv.Round(y0 + cf1*(a)))
+				xpt2 = int(cv.Round(x0 - cf2*(-b)))
+				ypt2 = int(cv.Round(y0 - cf2*(a)))
+				
+				#  and (xpt2>imageHeight or xpt2<0) and (ypt2>imageWidth or ypt2<0)
+				# and (not (0>ypt1>imageWidth) and not(0>ypt2>imageWidth)))
+				# while ((not (0>xpt1) or not (xpt1<imageHeight) )):		
+				# 	cf1 = cf1 - 50
+				# 	cf2 = cf2 + 50
+				# 	xpt1 = cv.Round(x0 + cf1*(-b))
+				# 	ypt1 = cv.Round(y0 + cf1*(a))
+				# 	xpt2 = cv.Round(x0 - cf2*(-b))
+				# 	ypt2 = cv.Round(y0 - cf2*(a))
+				A = np.array(((xpt1,ypt1),(xpt2,ypt2)))
+				B = np.array(((xpt11,ypt11),(xpt12,ypt12)))
+				X = np.array(())
+				m = line_intersection(A, B)
+				A = cv.CreateMat(2, 2, cv.CV_32FC1)
+				B = cv.CreateMat(2, 2, cv.CV_32FC1)
+				X =  cv.CreateMat(2, 2, cv.CV_32FC1)
+				cv.mSet(A, 1, 1, xpt11),cv.mSet(A, 1, 2, ypt11),cv.mSet(A, 2, 1, xpt12),cv.mSet(A, 2, 2, ypt12)
+				cv.mSet(B, 1, 1, xpt1),cv.mSet(B, 1, 2, ypt1),cv.mSet(B, 2, 1, xpt2),cv.mSet(B, 2, 2, ypt2)
+
+				cv.Solve(A, B, X, method=cv.CV_LU)
+				x = np.asarray(X)
+
 				pt1 = (xpt1,ypt1)
 				pt2 = (xpt2,ypt2)
-				xm = cv.Round((pt2[0] - pt1[0])/2.0)
-				ym = cv.Round((pt2[1] - pt1[1])/2.0)
-				cv.Circle(cvImg,(xm,ym),5,(254,0,254),-1)
+				xm = abs(cv.Round((xpt1 - xpt2)/2.0))
+				ym = abs(cv.Round((ypt1 - ypt2)/2.0))
 				cv.Line(cvImg, pt1, pt2, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
-				print (xm,ym)
-
+				try:
+					cv.Circle(cvImg,m,5,(254,0,254),-1)
+					
+				except:
+					noprint=0
+				print "pt1",pt1,"pt2",pt2
+				print "c",(xm,ym)
+				print "Xm",m
+				print "X",x
 
 			# cv.Smooth(thresholded_img2, thresholded_img2, cv.CV_GAUSSIAN, 3, 3)
 			# cv.Erode(thresholded_img2,thresholded_img2, None, closing)
 			# cv.Dilate(thresholded_img2,thresholded_img2, None, closing)
 
-			size = np.size(cvImg)
 
-
-			element = cv2.getStructuringElement(cv2.MORPH_CROSS,(3,3))
-			done = False
-			t=0
-			array = np.array(cvImg)
 			# while( t<10):
 			#     cv.Erode(thresholded_img,eroded, None, closing)
 			#     cv.Erode(thresholded_img,img, None, closing)
@@ -235,7 +287,7 @@ def meet(fighter):
 			#     if zeros==size:
 			#         done = True
 
-			
+
 
 			# storage = cv.CreateMemStorage(0)
 			# contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
@@ -271,8 +323,8 @@ def meet(fighter):
 			# 	closing=3
 			# if closing < 1:
 			# 	closing = 0
-		
-				
+
+
 
 			cv.ShowImage("Real",cvImg)
 			# cv.ShowImage("skel",skel)
@@ -328,7 +380,7 @@ if __name__ == "__main__":
 	if len(sys.argv) > 2:
 		IP = sys.argv[1]
 		fighter = sys.argv[2]
-	
+
 	init(IP,PORT)
 	#rockandload(fighter)
 	meet(fighter)
