@@ -174,12 +174,14 @@ def meet(fighter):
 			# cv.CvtColor(thresholded_img, thresholded_img, cv.CV_BGR2GRAY)
 			# cv.Sobel(thresholded_img, thresholded_img, 1, 0, apertureSize=3)
 			# cv.Canny(thresholded_img, thresholded_img, threshold1, threshold2, aperture_size=3)
+			tmp = cv.CreateImage(cv.GetSize(img),8,1)
+			tarray = np.asarray(cv.GetMat(tmp))
 			
-			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 120, param1=0, param2=0)
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 150, param1=0, param2=0)
 
-			cv.Canny(thresholded_img, edges, 10, 100, aperture_size=3) 
-
+			cv.Canny(thresholded_img, edges, 10, 100, aperture_size=3)
 			for l in lines:
+				xpt1,ypt1,xpt2,ypt2=0,0,0,0
 				rho = l[0]
 				theta = l[1]
 				print rho,theta
@@ -187,9 +189,20 @@ def meet(fighter):
 				b = np.sin(theta)
 				x0 = a*rho
 				y0 = b*rho
-				cf  = 1000
-				pt1 = (cv.Round(x0 + cf*(-b)) , cv.Round(y0 + cf*(a)))
-				pt2 = (cv.Round(x0 - cf*(-b)) , cv.Round(y0 - cf*(a)))
+				cf  = 500
+				print "size ",tarray.shape
+				while tarray[xpt1,ypt1]<50:
+					cf = cf - 10
+					xpt1 = abs(cv.Round(x0 + cf*(-b)))
+					ypt1 = abs(cv.Round(y0 + cf*(a)))
+					if ypt1>imageWidth-1:
+						ypt1=imageWidth-10
+					if xpt1>imageHeight-1:
+						xpt1=imageHeight-10
+				xpt2 = cv.Round(x0 - cf*(-b))
+				ypt2 = cv.Round(y0 - cf*(a))
+				pt1 = (xpt1,ypt1)
+				pt2 = (xpt2,ypt2)
 				xm = cv.Round((pt2[0] - pt1[0])/2.0)
 				ym = cv.Round((pt2[1] - pt1[1])/2.0)
 				cv.Circle(cvImg,(xm,ym),5,(254,0,254),-1)
@@ -261,7 +274,7 @@ def meet(fighter):
 		
 				
 
-			cv.ShowImage("Real",edges)
+			cv.ShowImage("Real",cvImg)
 			# cv.ShowImage("skel",skel)
 			cv.ShowImage("Threshold",thresholded_img)
 			cv.WaitKey(1)
