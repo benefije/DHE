@@ -18,7 +18,7 @@ def main(robotIp, u):
     mutex_cmd = th.Lock()
     
     visio = th.Thread(None, "TO-DO", "Visio", (shm_tar, mutex_bet, robotIp), {})
-    cmd = th.Thread(None, "TO-DO", "Commande", (shm_tar, cmd, mutex_tar, mutex_cmd, robotIp), {})
+    cmd = th.Thread(None, "TO-DO", "Commande", (shm_tar, shm_cmd, mutex_tar, mutex_cmd, robotIp), {})
     ctrl = th.Thread(None, "TO-DO", "Controle", (mcd, mutex_cmd, robotIp), {})
     
     visio.start()
