@@ -10,36 +10,39 @@ import threading as th
 import movSword as sw
 import sharedMem
 
-def main(robotIp):
-    bet = sharedMem([0.,0.,0.])
-    mutex_bet = th.Lock()
+def main(robotIp, u):
+    shm_tar = sharedMem([0,[0.,0.,0.]])
+    mutex_tar = th.Lock()
     
-    cmd = sharedMem([0,[0.,0.,0.,0.]])
+    shm_cmd = sharedMem([0,[0.,0.,0.,0.]])
     mutex_cmd = th.Lock()
     
-    visio = th.Thread(None, "TO-DO", "Visio", (bet, mutex_bet, robotIp), {})
-    cmd = th.Thread(None, "TO-DO", "Commande", (bet, cmd, mutex_bet, mutex_cmd, robotIp), {})
+    visio = th.Thread(None, "TO-DO", "Visio", (shm_tar, mutex_bet, robotIp), {})
+    cmd = th.Thread(None, "TO-DO", "Commande", (shm_tar, cmd, mutex_tar, mutex_cmd, robotIp), {})
     ctrl = th.Thread(None, "TO-DO", "Controle", (mcd, mutex_cmd, robotIp), {})
     
     visio.start()
     cmd.start()
     ctrl.start()
     
-    input("Press a key to close")
+    time.sleep(u)
     
-    visio.__stop()
-    cmd.__stop()
-    ctrl.__stop()
+    shm_tar.value[-2,[0.,0.,0.]]
+    shm_cmd.value[-2,[0.,0.,0.,0.]]
     
     print("That's all, folks!")
     
 
 if __name__ == "__main__":
     robotIp = "127.0.0.1"
+    u = 42
 
     if len(sys.argv) <= 1:
         print "Usage python almotion_changeposition.py robotIP (optional default: 127.0.0.1)"
+    elif len(sys.argv) <= 2:
+        robotIp = sys.argv[1]
     else:
         robotIp = sys.argv[1]
+        u = sys.argv[2]
 
-    main(robotIp)
+    main(robotIp, u)
