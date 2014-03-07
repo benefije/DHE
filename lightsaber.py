@@ -56,61 +56,7 @@ def line_intersection(line1, line2):
     return x, y
 
 
-def clustering(data,cvImg,nframe,error,K=2):
-	flag1=0
-	flag2=0
-	l0=0
-	l1=0
-
-	centroid, labels=np.array([]),np.array([])
-	if len(data)>1:
-		dataarray = np.asarray(data)
-		centroid, labels = kmeans.kMeans(dataarray, K, maxIters = 20, plot_progress = None)  
-
-		try:
-			cv.Line(cvImg,(int(centroid[0][0]),int(centroid[0][1])),(int(centroid[1][0]),int(centroid[1][1])),(255,0,0))
-			cv.Circle(cvImg,int(centroid[0][0]),int(centroid[0][1]),5,(0,255,0),-1)
-		except:
-			per=False
-		i=0
-		for l in labels:
-			if l==0:
-				l0=l0+1
-			if l==1:
-				l1=l1+1
-
-		if l1>l0:
-			temp = centroid[0]
-			centroid[0] = centroid[1]
-			centroid[1] = temp
-			for l in labels:
-				if l==0:	
-					cv.Circle(cvImg,(data[i][0],data[i][1]),5,(254,0,254),-1)
-					flag1=1
-				if l==1:			
-					cv.Circle(cvImg,(data[i][0],data[i][1]),5,(0,255,255),-1)
-					flag2=1
-				i=i+1
-		else:
-			for l in labels:
-				if l==0:				
-					cv.Circle(cvImg,(data[i][0],data[i][1]),5,(0,255,255),-1)
-					flag1=1
-				if l==1:		
-					cv.Circle(cvImg,(data[i][0],data[i][1]),5,(254,0,254),-1)
-					flag2=1
-				i=i+1
-		try:
-			cv.Circle(cvImg,(int(centroid[0][0]),int(centroid[0][1])),5,(0,255,0),-1)
-		except:
-			per=False
-		if(flag1 + flag2<2):
-			error=error+1
-			pcterror = (error/nframe)*100.0
-			#print "current error of kmeans = ",pcterror,"%"          	
-	return cvImg,error,centroid, labels
-
-def meet(fighter):
+def swordcenterdetection(enemy):
 	global motionProxy
 	global post
 	global sonarProxy
@@ -154,6 +100,7 @@ def meet(fighter):
 	closing = 1
 	tstp,tu=0,0
 	K=2
+	pb = 0.5 # low pass filter value 
 	try:
 		while found:
 			nframe=nframe+1
@@ -180,28 +127,17 @@ def meet(fighter):
 			edges = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			# Get the orange on the image
 			cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img)
-			#cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img2)
 			storage = cv.CreateMemStorage(0)
-			#contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
-			#cv.Smooth(thresholded_img, thresholded_img, cv.CV_GAUSSIAN, 3, 3)
-			# cv.Erode(thresholded_img,thresholded_img, None, closing)
-			# cv.Dilate(thresholded_img,thresholded_img, None, closing)
-			# cv.CvtColor(thresholded_img, thresholded_img, cv.CV_HSV2BGR)
-			# cv.CvtColor(thresholded_img, thresholded_img, cv.CV_BGR2GRAY)
-			# cv.Sobel(thresholded_img, thresholded_img, 1, 0, apertureSize=3)
-			# cv.Canny(thresholded_img, thresholded_img, threshold1, threshold2, aperture_size=3)
 
-			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 30, param1=0, param2=0)
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 100, param1=0, param2=0)
 
-			#cv.Canny(thresholded_img, edges, 10, 100, aperture_size=3)
 			first = 1
 			sl=0
 			Mx=[]
 			My=[]
 			for l in lines:
 				sl=sl+1
-			# for l in lines:
-			for i in range(sl-1):
+			for i in range((sl-1)):
 				l=lines[i]
 				rho = l[0]
 				theta = l[1]
@@ -231,18 +167,9 @@ def meet(fighter):
 				xpt2 = int(cv.Round(x0 - cf2*(-b)))
 				ypt2 = int(cv.Round(y0 - cf2*(a)))
 
-				#  and (xpt2>imageHeight or xpt2<0) and (ypt2>imageWidth or ypt2<0)
-				# and (not (0>ypt1>imageWidth) and not(0>ypt2>imageWidth)))
-				# while ((not (0>xpt1) or not (xpt1<imageHeight) )):		
-				# 	cf1 = cf1 - 50
-				# 	cf2 = cf2 + 50
-				# 	xpt1 = cv.Round(x0 + cf1*(-b))
-				# 	ypt1 = cv.Round(y0 + cf1*(a))
-				# 	xpt2 = cv.Round(x0 - cf2*(-b))
-				# 	ypt2 = cv.Round(y0 - cf2*(a))
 				A = np.array(((xpt1,ypt1),(xpt2,ypt2)))
 				B = np.array(((xpt11,ypt11),(xpt12,ypt12)))
-				X = np.array(())
+
 				try:
 					m = line_intersection(A, B)
 					mx = m[0]
@@ -255,74 +182,29 @@ def meet(fighter):
 				pt1 = (xpt1,ypt1)
 				pt2 = (xpt2,ypt2)
 				cv.Line(cvImg, pt1, pt2, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
-
-			if len(Mx)!=0:
-				
+			cMx,cMy=[],[]
+			for x in Mx:
+				cMx.append((1-pb)*x)
+			for y in My:
+				cMy.append((1-pb)*y)
+			try:
+				for i in range(len(cMx)):
+					Mx[i] = cMx[i]+cMtx[i]
+					My[i] = cMy[i]+cMty[i]
 				Mm = (int(np.mean(Mx)),int(np.mean(My)))
 				print "M",Mm
 				cv.Circle(cvImg,Mm,5,(254,0,254),-1)
-
-
-			# cv.Smooth(thresholded_img2, thresholded_img2, cv.CV_GAUSSIAN, 3, 3)
-			# cv.Erode(thresholded_img2,thresholded_img2, None, closing)
-			# cv.Dilate(thresholded_img2,thresholded_img2, None, closing)
-
-
-			# while( t<10):
-			#     cv.Erode(thresholded_img,eroded, None, closing)
-			#     cv.Erode(thresholded_img,img, None, closing)
-			#     cv.Dilate(thresholded_img,temp, None, closing)
-
-			#     cv.Sub(thresholded_img, temp, temp, mask=None)
-			#     cv.Or(skel, temp, skel, mask=None)
-
-			#     zeros = size - cv.CountNonZero(img)
-			#     t=t+1
-			#     #print zeros
-			#     if zeros==size:
-			#         done = True
-
-
-
-			# storage = cv.CreateMemStorage(0)
-			# contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
-			# points = [] 
-
-			# d=[]
-			# data=[]
-			# while contour:			
-			# 	# Draw bounding rectangles
-			# 	bound_rect = cv.BoundingRect(list(contour))
-			# 	contour = contour.h_next()
-			# 	# for more details about cv.BoundingRect,see documentation
-			# 	pt1 = (bound_rect[0], bound_rect[1])
-			# 	pt2 = (bound_rect[0] + bound_rect[2], bound_rect[1] + bound_rect[3])
-			# 	points.append(pt1)
-			# 	points.append(pt2)
-			# 	cv.Rectangle(cvImg, pt1, pt2, cv.CV_RGB(255,0,0), 1)
-			# 	lastx=posx
-			# 	lasty=posy
-			# 	posx=cv.Round((pt1[0]+pt2[0])/2)
-			# 	posy=cv.Round((pt1[1]+pt2[1])/2)
-			# 	data.append([posx,posy])
-			# 	d.append(math.sqrt(pt1[0]**2+pt2[0]**2))
-			# 	d.append(math.sqrt(pt1[1]**2+pt2[1]**2))
-
-			# cvImg,error,centroid,labels = clustering(data,cvImg,nframe,error,K)
-			# # Update the closing size towards the number of found labels
-			# if labels.size<2:
-			# 	closing=1
-			# if labels.size<6:
-			# 	closing = 2
-			# if labels.size>10:
-			# 	closing=3
-			# if closing < 1:
-			# 	closing = 0
-
-
-
+			except:
+				error=1 # we are at first iteration
+			cMtx,cMty=[],[]
+			Mtx = Mx
+			Mty = My
+			for x in Mtx:
+				cMtx.append(pb*x)
+			for y in Mty:
+				cMty.append(pb*y)
+			
 			cv.ShowImage("Real",cvImg)
-			# cv.ShowImage("skel",skel)
 			cv.ShowImage("Threshold",thresholded_img)
 			cv.WaitKey(1)
 
@@ -374,8 +256,8 @@ if __name__ == "__main__":
 		IP = sys.argv[1]
 	if len(sys.argv) > 2:
 		IP = sys.argv[1]
-		fighter = sys.argv[2]
+		enemy = sys.argv[2]
 
 	init(IP,PORT)
 	#rockandload(fighter)
-	meet(fighter)
+	swordcenterdetection(enemy)
