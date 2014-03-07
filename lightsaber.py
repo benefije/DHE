@@ -191,7 +191,7 @@ def meet(fighter):
 			# cv.Sobel(thresholded_img, thresholded_img, 1, 0, apertureSize=3)
 			# cv.Canny(thresholded_img, thresholded_img, threshold1, threshold2, aperture_size=3)
 
-			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 70, param1=0, param2=0)
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 120, param1=0, param2=0)
 
 			#cv.Canny(thresholded_img, edges, 10, 100, aperture_size=3)
 			first = 1
@@ -199,11 +199,13 @@ def meet(fighter):
 			for l in lines:
 				sl=sl+1
 			# for l in lines:
-			if (sl)!=0:
-				l=lines[0]
+			Mx=[]
+			My=[]
+			for l in lines:
+				
 				rho = l[0]
 				theta = l[1]
-				print rho,theta
+				#print rho,theta
 				a = np.cos(theta)
 				b = np.sin(theta)
 				x0 = a*rho
@@ -216,11 +218,21 @@ def meet(fighter):
 				pt11 = (xpt11,ypt11)
 				pt12 = (xpt12,ypt12)
 				cv.Line(cvImg, pt11, pt12, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
+				B = np.array(((xpt11,ypt11),(xpt12,ypt12)))
 
-				l=lines[sl-1]
+				try:		
+					mx,my = line_intersection(A, B)
+					print "m",(mx,my)
+					Mx.append(mx)
+					My.append(my)
+					
+				except:
+					noprint=0
+
+
 				rho = l[0]
 				theta = l[1]
-				print rho,theta
+				#print rho,theta
 				a = np.cos(theta)
 				b = np.sin(theta)
 				x0 = a*rho
@@ -230,7 +242,7 @@ def meet(fighter):
 				ypt1 = int(cv.Round(y0 + cf1*(a)))
 				xpt2 = int(cv.Round(x0 - cf2*(-b)))
 				ypt2 = int(cv.Round(y0 - cf2*(a)))
-				
+				A = np.array(((xpt1,ypt1),(xpt2,ypt2)))
 				#  and (xpt2>imageHeight or xpt2<0) and (ypt2>imageWidth or ypt2<0)
 				# and (not (0>ypt1>imageWidth) and not(0>ypt2>imageWidth)))
 				# while ((not (0>xpt1) or not (xpt1<imageHeight) )):		
@@ -240,10 +252,10 @@ def meet(fighter):
 				# 	ypt1 = cv.Round(y0 + cf1*(a))
 				# 	xpt2 = cv.Round(x0 - cf2*(-b))
 				# 	ypt2 = cv.Round(y0 - cf2*(a))
-				A = np.array(((xpt1,ypt1),(xpt2,ypt2)))
-				B = np.array(((xpt11,ypt11),(xpt12,ypt12)))
+				
+				
 				X = np.array(())
-				m = line_intersection(A, B)
+				
 				A = cv.CreateMat(2, 2, cv.CV_32FC1)
 				B = cv.CreateMat(2, 2, cv.CV_32FC1)
 				X =  cv.CreateMat(2, 2, cv.CV_32FC1)
@@ -258,16 +270,18 @@ def meet(fighter):
 				xm = abs(cv.Round((xpt1 - xpt2)/2.0))
 				ym = abs(cv.Round((ypt1 - ypt2)/2.0))
 				cv.Line(cvImg, pt1, pt2, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
-				try:
-					cv.Circle(cvImg,m,5,(254,0,254),-1)
-					
-				except:
-					noprint=0
-				print "pt1",pt1,"pt2",pt2
-				print "c",(xm,ym)
-				print "Xm",m
-				print "X",x
 
+				mx,my = line_intersection(A, B)
+				print "m",(mx,my)
+				Mx.append(mx)
+				My.append(my)
+					
+					
+			print "len",len(Mx)
+			if len(Mx)!=0:
+				print "M",M
+				Mm = (int(np.mean(Mx)),int(np.mean(My)))
+				cv.Circle(cvImg,Mm,5,(254,0,254),-1)
 			# cv.Smooth(thresholded_img2, thresholded_img2, cv.CV_GAUSSIAN, 3, 3)
 			# cv.Erode(thresholded_img2,thresholded_img2, None, closing)
 			# cv.Dilate(thresholded_img2,thresholded_img2, None, closing)
@@ -367,8 +381,8 @@ def init(IP,PORT):
 	sonarProxy = ALProxy("ALSonar", IP, PORT)
 	sonarProxy.subscribe("myApplication")
 	memoryProxy = ALProxy("ALMemory", IP, PORT)
-	post.goToPosture("StandInit", 1.0)
-	time.sleep(2)
+	post.goToPosture("Crouch", 1.0)
+	# time.sleep(2)
 
 
 if __name__ == "__main__":
