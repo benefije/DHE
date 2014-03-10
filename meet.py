@@ -238,13 +238,12 @@ def meet(fighter):
 				#S'il attend plus de 5sec, il admet qu'il est devant sa cible
 				if tact>5:
 					found=False
-					# if fighter=="dark":
-					# 	tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
-					# 	time.sleep(1.0)
-					# if fighter=="obi":
-					# 	time.sleep(15.0)
-					# 	tts.say("Only a master of evil, Darth.")
-					end()
+					if fighter=="dark":
+						tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
+						time.sleep(1.0)
+					if fighter=="obi":
+						time.sleep(15.0)
+						tts.say("Only a master of evil, Darth.")
 
 			cv.ShowImage("Real",cvImg)
 			cv.ShowImage("Threshold",thresholded_img2)
@@ -301,5 +300,5 @@ if __name__ == "__main__":
 		fighter = sys.argv[2]
 	
 	init(IP,PORT)
-	#rockandload(fighter)
-	#meet(fighter)
+	rockandload(fighter)
+	meet(fighter)

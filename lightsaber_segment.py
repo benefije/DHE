@@ -56,7 +56,7 @@ def line_intersection(line1, line2):
     return x, y
 
 
-def swordcenterdetection(enemy):
+def swordcenterdetection(enemy,window=5,pb=0.7,segHough=50):
 	global motionProxy
 	global post
 	global sonarProxy
@@ -100,7 +100,9 @@ def swordcenterdetection(enemy):
 	closing = 1
 	tstp,tu=0,0
 	K=2
-	pb = 0.5 # low pass filter value 
+	Mf,Mft = [],[]
+	window = 5 # lenght of the window of observation for the low pass filter 
+	pb = 0.7 # low pass filter value 
 	try:
 		while found:
 			nframe=nframe+1
@@ -119,92 +121,35 @@ def swordcenterdetection(enemy):
 			hsv_img = cv.CreateImage(cv.GetSize(cvImg), 8, 3)
 			cv.CvtColor(cvImg, hsv_img, cv.CV_BGR2HSV)
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			thresholded_img2 =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			temp =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			eroded =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			skel = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			img = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			edges = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			# Get the orange on the image
-			cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img)
+			# Get the blue on the image
+			cv.InRangeS(hsv_img, (100, 80, 80), (160, 255, 255), thresholded_img)
 			storage = cv.CreateMemStorage(0)
 
-			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_PROBABILISTIC, 1, cv.CV_PI/180, 30, param1=0, param2=0)
-			print lines
-
-			first = 1
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_PROBABILISTIC, 1, cv.CV_PI/180, segHough, param1=0, param2=0)
 			sl=0
-			Mx=[]
-			My=[]
+			PTx,PTy,Mftx,Mfty = [],[],[],[]
 			for l in lines:
-				sl=sl+1
-			for i in range((sl-1)):
-				l=lines[i]
-				print l
-				rho = l[0]
-				theta = l[1]
-				a = np.cos(theta)
-				b = np.sin(theta)
-				x0 = a*rho
-				y0 = b*rho
-				cf1,cf2  = 300,300
-				# xpt11 = int(cv.Round(x0 + cf1*(-b)))
-				# ypt11 = int(cv.Round(y0 + cf1*(a)))
-				# xpt12 = int(cv.Round(x0 - cf2*(-b)))
-				# ypt12 = int(cv.Round(y0 - cf2*(a)))
-				pt11 = l[0]
-				pt12 = l[1]
-				cv.Line(cvImg, pt11, pt12, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
-
-				l=lines[(i+1)]
-				rho = l[0]
-				theta = l[1]
-				a = np.cos(theta)
-				b = np.sin(theta)
-				x0 = a*rho
-				y0 = b*rho
-				cf1,cf2  = 300,300
-				# xpt1 = int(cv.Round(x0 + cf1*(-b)))
-				# ypt1 = int(cv.Round(y0 + cf1*(a)))
-				# xpt2 = int(cv.Round(x0 - cf2*(-b)))
-				# ypt2 = int(cv.Round(y0 - cf2*(a)))
-
-				# A = np.array(((xpt1,ypt1),(xpt2,ypt2)))
-				# B = np.array(((xpt11,ypt11),(xpt12,ypt12)))
-
-				# try:
-				# 	m = line_intersection(A, B)
-				# 	mx = m[0]
-				# 	my = m[1]
-				# 	Mx.append(mx)
-				# 	My.append(my)
-				# except:
-				# 	error=1 #intersection return False we don't add the point
-
 				pt1 = l[0]
 				pt2 = l[1]
 				cv.Line(cvImg, pt1, pt2, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
-			cMx,cMy=[],[]
-			for x in Mx:
-				cMx.append((1-pb)*x)
-			for y in My:
-				cMy.append((1-pb)*y)
-			try:
-				for i in range(len(cMx)):
-					Mx[i] = cMx[i]+cMtx[i]
-					My[i] = cMy[i]+cMty[i]
-				Mm = (int(np.mean(Mx)),int(np.mean(My)))
-				print "M",Mm
-				cv.Circle(cvImg,Mm,5,(254,0,254),-1)
-			except:
-				error=1 # we are at first iteration
-			cMtx,cMty=[],[]
-			Mtx = Mx
-			Mty = My
-			for x in Mtx:
-				cMtx.append(pb*x)
-			for y in Mty:
-				cMty.append(pb*y)
+				PTx.append(pt1[0])
+				PTx.append(pt2[0])
+				PTy.append(pt1[1])
+				PTy.append(pt2[1])
+			if len(PTx)!=0:	
+				xm = np.mean(PTx)
+				ym = np.mean(PTy)
+				M = (int(xm),int(ym))
+				Mf.append(M)
+				if len(Mf)>window:
+					Mft = Mf[len(Mf)-window:len(Mf)]
+					for m in Mft[0:-2]:
+						Mftx.append(m[0])
+						Mfty.append(m[1])
+					mx = (1-pb)*np.mean(Mftx) + pb*Mftx[-1]
+					my = (1-pb)*np.mean(Mfty) + pb*Mfty[-1]
+					M = (int(mx),int(my))
+					cv.Circle(cvImg,M,5,(254,0,254),-1)
 			
 			cv.ShowImage("Real",cvImg)
 			cv.ShowImage("Threshold",thresholded_img)
@@ -246,7 +191,7 @@ def init(IP,PORT):
 	sonarProxy = ALProxy("ALSonar", IP, PORT)
 	sonarProxy.subscribe("myApplication")
 	memoryProxy = ALProxy("ALMemory", IP, PORT)
-	post.goToPosture("Crouch", 1.0)
+	post.goToPosture("StandInit", 1.0)
 	time.sleep(2)
 
 
