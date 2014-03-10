@@ -16,6 +16,8 @@ import math
 import reset
 import kmeans
 import nao_live
+import sharedMem
+import threading as th
 
 global motionProxy
 global tts
@@ -23,21 +25,6 @@ global post
 global sonarProxy
 global memoryProxy
 
-def rockandload(fighter):
-	global motionProxy
-	global post
-	if fighter=="obi":
-		tts.say("I need my blue lightsaber")
-	if fighter=="dark":
-		tts.say("I need my red lightsaber")
-	names  = ["RHand", "LHand"]
-	angles = [1,1]
-	fractionMaxSpeed  = 0.2
-	motionProxy.setAngles(names, angles, fractionMaxSpeed)
-	time.sleep(3)
-	angles = [0.15,0.15]
-	motionProxy.setAngles(names, angles, fractionMaxSpeed)
-	time.sleep(1)
 
 def line_intersection(line1, line2):
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
@@ -56,7 +43,7 @@ def line_intersection(line1, line2):
     return x, y
 
 
-def swordcenterdetection(enemy,window=5,pb=0.7,segHough=50):
+def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough=50):
 	global motionProxy
 	global post
 	global sonarProxy
@@ -105,6 +92,18 @@ def swordcenterdetection(enemy,window=5,pb=0.7,segHough=50):
 	pb = 0.7 # low pass filter value 
 	try:
 		while found:
+
+			#Synchro
+			mutex_tar.acquire()
+	        n = shm_tar.value[0]
+	        mutex_tar.release()
+	        if n==-1:
+	            print "Fail in target mem zone tar. Exit" , n
+	            break
+	        elif n==-2:
+	            print "Terminated by parent"
+	            break
+
 			nframe=nframe+1
 			# Get current image (top cam)
 			naoImage = cameraProxy.getImageRemote(videoClient)
@@ -150,7 +149,10 @@ def swordcenterdetection(enemy,window=5,pb=0.7,segHough=50):
 					my = (1-pb)*np.mean(Mfty) + pb*Mfty[-1]
 					M = (int(mx),int(my))
 					cv.Circle(cvImg,M,5,(254,0,254),-1)
-			
+					mutex_cmd.acquire()
+			        shm_cmd.value = M
+			        mutex_cmd.release()
+
 			cv.ShowImage("Real",cvImg)
 			cv.ShowImage("Threshold",thresholded_img)
 			cv.WaitKey(1)
@@ -194,6 +196,9 @@ def init(IP,PORT):
 	post.goToPosture("StandInit", 1.0)
 	time.sleep(2)
 
+def main(shm_tar, mutex_tar,IP,PORT,enemy):
+	init(IP,PORT)
+	swordcenterdetection(shm_tar, mutex_tar,enemy)
 
 if __name__ == "__main__":
 	IP = "172.20.12.26"
@@ -204,7 +209,5 @@ if __name__ == "__main__":
 	if len(sys.argv) > 2:
 		IP = sys.argv[1]
 		enemy = sys.argv[2]
-
-	init(IP,PORT)
-	#rockandload(fighter)
-	swordcenterdetection(enemy)
+	main(IP,PORT,enemy)
+	
