@@ -109,19 +109,19 @@ def move(robotIP, go, mutex_cmd):
 
 """Returns coordinates for the prime posture"""        
 def pos_prime():
-    return [0.,0.,0.,0.] #TO DO
+    return [0.1,0.1,0.,0.6] #TO DO
     
 """Returns coordinates for the seconde posture"""        
 def pos_seconde():
-    return [0.,0.,0.,0.] #TO DO
+    return [0.2,-0.05,0.,0.4] #TO DO
     
 """Returns coordinates for the tierce posture"""        
 def pos_tierce():
-    return [0.,0.,0.,0.] #TO DO
+    return [0.15,-0.1,0.1,-0.5] #TO DO
     
 """Returns coordinates for the quarte posture"""        
 def pos_quarte():
-    return [0.,0.,0.,0.] #TO DO
+    return [0.1,0.025,0.1,-0.2] #TO DO
     
 def main_ctrl(shm_cmd,mutex_cmd,robotIP):
     global position
