@@ -15,10 +15,10 @@ def main(robotIp):
     gt = _Getch()
     c = 'g'    
     
-    shm_tar = sharedMem([0,[0.,0.,0.]])
+    shm_tar = sharedMem([0,(0.,0.,0.,0.)])
     mutex_tar = th.Lock()
     
-    shm_cmd = sharedMem([0,[0.,0.,0.,0.]])
+    shm_cmd = sharedMem([0,(0.,0.,0.,0.)])
     mutex_cmd = th.Lock()
     
     visio = th.Thread(None, "TO-DO", "Visio", (shm_tar, mutex_bet, robotIp), {})
