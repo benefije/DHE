@@ -24,6 +24,8 @@ global tts
 global post
 global sonarProxy
 global memoryProxy
+global IP
+global PORT
 
 
 def line_intersection(line1, line2):
@@ -48,6 +50,8 @@ def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough
 	global post
 	global sonarProxy
 	global memoryProxy
+	global IP
+	global PORT
 	# work ! set current to servos
 	stiffnesses  = 1.0
 	time.sleep(0.5)
@@ -82,29 +86,25 @@ def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough
 	cv.MoveWindow("Real",0,0)
 	cv.NamedWindow("Threshold")
 	cv.MoveWindow("Real",imageWidth+100,0)
-	error=0.0
-	nframe=0.0
 	closing = 1
 	tstp,tu=0,0
 	K=2
 	Mf,Mft = [],[]
 	window = 5 # lenght of the window of observation for the low pass filter 
 	pb = 0.7 # low pass filter value 
+	print "before lines"
 	try:
 		while found:
-
 			#Synchro
 			mutex_tar.acquire()
-	        n = shm_tar.value[0]
-	        mutex_tar.release()
-	        if n==-1:
-	            print "Fail in target mem zone tar. Exit" , n
-	            break
-	        elif n==-2:
-	            print "Terminated by parent"
-	            break
+			n = shm_tar.value[0]
+			mutex_tar.release()
+			if n==-1:
+				print "Fail in target mem zone tar. Exit" , n
+				
+			elif n==-2:
+				print "Terminated by parent"
 
-			nframe=nframe+1
 			# Get current image (top cam)
 			naoImage = cameraProxy.getImageRemote(videoClient)
 			# Get the image size and pixel array.
@@ -120,13 +120,22 @@ def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough
 			hsv_img = cv.CreateImage(cv.GetSize(cvImg), 8, 3)
 			cv.CvtColor(cvImg, hsv_img, cv.CV_BGR2HSV)
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
+			
 			# Get the blue on the image
-			cv.InRangeS(hsv_img, (100, 80, 80), (160, 255, 255), thresholded_img)
+			cv.InRangeS(hsv_img, (110, 80, 80), (140, 255, 255), thresholded_img)
+			cv.Erode(thresholded_img,thresholded_img, None, closing)
+			cv.Dilate(thresholded_img,thresholded_img, None, closing)
 			storage = cv.CreateMemStorage(0)
 
 			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_PROBABILISTIC, 1, cv.CV_PI/180, segHough, param1=0, param2=0)
+			lines_standard = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, segHough, param1=0, param2=0)
+			Theta = []
+			for l in lines_standard:
+				Theta.append(l[1])
+			theta = np.mean(Theta)
 			sl=0
 			PTx,PTy,Mftx,Mfty = [],[],[],[]
+
 			for l in lines:
 				pt1 = l[0]
 				pt2 = l[1]
@@ -149,9 +158,10 @@ def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough
 					my = (1-pb)*np.mean(Mfty) + pb*Mfty[-1]
 					M = (int(mx),int(my))
 					cv.Circle(cvImg,M,5,(254,0,254),-1)
-					mutex_cmd.acquire()
-			        shm_cmd.value = M
-			        mutex_cmd.release()
+
+					mutex_tar.acquire()
+					shm_tar.value = [n,(M[0],M[1],0,theta)]
+					mutex_tar.release()
 
 			cv.ShowImage("Real",cvImg)
 			cv.ShowImage("Threshold",thresholded_img)
@@ -180,12 +190,14 @@ def end():
 	cameraProxy.unsubscribe(videoClient)
 	sys.exit(0)
 
-def init(IP,PORT):
+def init():
 	global motionProxy
 	global tts
 	global post
 	global sonarProxy
 	global memoryProxy
+	global IP
+	global PORT
 
 	post = ALProxy("ALRobotPosture", IP, PORT)
 	tts = ALProxy("ALTextToSpeech", IP, PORT)
@@ -196,8 +208,12 @@ def init(IP,PORT):
 	post.goToPosture("StandInit", 1.0)
 	time.sleep(2)
 
-def main(shm_tar, mutex_tar,IP,PORT,enemy):
-	init(IP,PORT)
+def main(shm_tar, mutex_tar,IPf,enemy):
+	global IP
+	global PORT
+	IP = IPf
+	PORT = 9559
+	init()
 	swordcenterdetection(shm_tar, mutex_tar,enemy)
 
 if __name__ == "__main__":

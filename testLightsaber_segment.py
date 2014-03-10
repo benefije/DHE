@@ -13,26 +13,27 @@ import sharedMem as shm
 import sys
 import time
 
-def main(robotIp,positions):
+def main(robotIp,enemy):
     pos = shm.sharedMem((0,0))
-    mutex_pos = th.Lock()
-    
-    ctrl = th.Thread(None, ls.main, "Controle", (pos, mutex_pos, robotIp), {})
+    mutex_pos = th.Lock()   
+    ctrl = th.Thread(None, ls.main, "Vision", (pos, mutex_pos, robotIp,enemy), {})
     ctrl.start()
-    
-
-    mutex_cmd.acquire()
-    mutex_cmd.release()
-    print "in mutex",pos.value
+    while True:
+        mutex_pos.acquire()
+        c = pos.value
+        mutex_pos.release()
+        print "pos in mutex ",c
+        time.sleep(2)
 
 
 if __name__ == "__main__":    
     robotIp = "172.20.10.90"
     
-    if len(sys.argv) <= 1:
-        position         = [0.1,0.0,0.25,-1.57]
+    if len(sys.argv) > 1:
+        robotIp         = sys.argv[1]
+    if len(sys.argv) > 2:
+        robotIp         = sys.argv[1]
+        enemy         = sys.argv[2]
+    
 
-    else:
-       position = eval('['+sys.argv[1]+']')
-
-    main(robotIp,position)
+    main(robotIp,enemy)
