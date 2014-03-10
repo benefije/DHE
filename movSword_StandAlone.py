@@ -95,7 +95,7 @@ if __name__ == "__main__":
     robotIp = "172.20.11.131"
     
     if len(sys.argv) <= 1:
-        position         = [0.1,0.0,0.25,-1.57]
+        position         = [0.125,0.0,0.25,-1.57]
 
     else:
         position = eval('['+sys.argv[1]+']')
