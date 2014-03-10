@@ -9,8 +9,12 @@ import time
 import threading as th
 import movSword as sw
 import sharedMem
+import getch
 
 def main(robotIp, u):
+    gt = _Getch()
+    c = 'g'    
+    
     shm_tar = sharedMem([0,[0.,0.,0.]])
     mutex_tar = th.Lock()
     
@@ -25,7 +29,9 @@ def main(robotIp, u):
     cmd.start()
     ctrl.start()
     
-    time.sleep(u)
+    while c!='s':
+        time.sleep(4.2)
+        c = gt()
     
     shm_tar.value[-2,[0.,0.,0.]]
     shm_cmd.value[-2,[0.,0.,0.,0.]]
@@ -35,14 +41,10 @@ def main(robotIp, u):
 
 if __name__ == "__main__":
     robotIp = "127.0.0.1"
-    u = 42
 
     if len(sys.argv) <= 1:
         print "Usage python almotion_changeposition.py robotIP (optional default: 127.0.0.1)"
-    elif len(sys.argv) <= 2:
-        robotIp = sys.argv[1]
     else:
         robotIp = sys.argv[1]
-        u = sys.argv[2]
 
-    main(robotIp, u)
+    main(robotIp)
