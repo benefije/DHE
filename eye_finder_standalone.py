@@ -16,7 +16,6 @@ import math
 import reset
 import kmeans
 import nao_live
-import threading as th
 
 global motionProxy
 global tts
@@ -97,7 +96,7 @@ def clustering(data,cvImg,nframe,error,K=1):
 			#print "current error of kmeans = ",pcterror,"%"          	
 	return cvImg,error,centroid, labels
 
-def eyefinder(shm_tar, mutex_tar,IP,PORT,fighter):
+def eyefinder(IP,PORT):
 	global motionProxy
 	global post
 	global sonarProxy
@@ -134,20 +133,9 @@ def eyefinder(shm_tar, mutex_tar,IP,PORT,fighter):
 	nframe=0.0
 	closing = 3
 	tstp,tu=0,0
-	K=2
+	K=1
 	try:
 		while found:
-
-			#Synchro
-			mutex_tar.acquire()
-			n = shm_tar.value[0]
-			mutex_tar.release()
-			if n==-1:
-				print "Fail in target mem zone tar. Exit" , n
-				
-			elif n==-2:
-				print "Terminated by parent"
-
 			nframe=nframe+1
 			# Get current image (top cam)
 			naoImage = cameraProxy.getImageRemote(videoClient)
@@ -161,6 +149,11 @@ def eyefinder(shm_tar, mutex_tar,IP,PORT,fighter):
 			cvImg = cv.CreateImageHeader((imageWidth, imageHeight),cv.IPL_DEPTH_8U, 3)
 			cv.SetData(cvImg, pilImg.tostring())
 			cv.CvtColor(cvImg, cvImg, cv.CV_RGB2BGR)
+
+			cvImg2 = cv.CreateImageHeader((imageWidth, imageHeight),cv.IPL_DEPTH_8U, 3)
+			cv.SetData(cvImg2, pilImg.tostring())
+			cv.CvtColor(cvImg2, cvImg, cv.CV_RGB2BGR)
+
 			hsv_img = cv.CreateImage(cv.GetSize(cvImg), 8, 3)
 			cv.CvtColor(cvImg, hsv_img, cv.CV_BGR2HSV)
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
@@ -228,14 +221,20 @@ def eyefinder(shm_tar, mutex_tar,IP,PORT,fighter):
 					C = [c1,c2]
 				else:
 					C = [c2,c1]
-				#print C
-				mutex_tar.acquire()
-				shm_tar.value = [n,C[0],C[1]]
-				mutex_tar.release()
-
+				print C
+			cv.ShowImage("Blue",cvImg)
+			cv.ShowImage("Green",cvImg2)
+			#cv.ShowImage("Threshold",thresholded_img2)
+			cv.ShowImage("Threshold",thresholded2)
 			cv.WaitKey(1)
 
 			
+
+			
+			cv.ShowImage("Real",cvImg)
+			#cv.ShowImage("Threshold",thresholded_img2)
+			cv.ShowImage("Threshold",thresholded2)
+			cv.WaitKey(1)
 
 	except KeyboardInterrupt:
 		print
@@ -299,12 +298,10 @@ def init(IP,PORT):
 
 
 
-def main_eye(shm_tar, mutex_tar,IP):
-	PORT = 9559
-	fighter = "obi"
+def main_eye(IP,PORT):
 	init(IP,PORT)
 	#rockandload(fighter)
-	eyefinder(shm_tar, mutex_tar,IP,PORT,fighter)
+	eyefinder(IP,PORT)
 
 
 if __name__ == "__main__":
@@ -316,5 +313,5 @@ if __name__ == "__main__":
 	if len(sys.argv) > 2:
 		IP = sys.argv[1]
 		fighter = sys.argv[2]
-	main(IP,PORT,fighter)
+	main_eye(IP,PORT)
 	
