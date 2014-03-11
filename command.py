@@ -10,6 +10,19 @@ import sys
 
 global cur_pos
 
+"""Convert y and z coordinates from pixel frame into metric frame from eyes coordinates"""
+def convert(pos, frame):
+    d = abs(frame[1][0]-frame[2][0])
+    n = 0.05/d #scale factor, 0.05 is the eyes' gauge
+    
+    x0 = n*frame[1][0] - 0.025
+    y0 = n*frame[1][1] - 0.1765 #Metric coordinates of the new frame's center
+    
+    yls = n*pos[1] - x0
+    zls = n*pos[2] - y0
+    
+    return (pos[0],yls,zls,pos[3])
+
 """Check if a point (x,y) is in a box around a target (X,Y)"""
 def isInInterval(x,y,X,Y,th):
     lo = 0.05
@@ -18,7 +31,7 @@ def isInInterval(x,y,X,Y,th):
     x0 = x - X #Switching to a frame which X,Y is the center
     y0 = y - Y
     
-    a = -m.tan(th) #Calcultaing cartesian parameters of the line including X,Y, with an agle theta
+    a = -m.tan(th) #Calculating cartesian parameters of the line including X,Y, with an agle theta
     d = abs(a*x+y)/m.sqrt(a*a+1) #Computing the distance from x,y to the line
     
     if d<la and abs(x)<lo: #if in a rectangle with legnth lo and width la, centered on X,Y
@@ -77,7 +90,7 @@ def behav(pos_ls):
 
 """Loop for summoning the calculation function.
 Includes reading and writing the shared memory zones"""
-def main_cmd(shm_tar, shm_cmd, mutex_tar, mutex_cmd):
+def main_cmd(shm_eye, mutex_eye, shm_tar, shm_cmd, mutex_tar, mutex_cmd):
     global cur_pos
     cur_pos = (-10.,10.,-10.)
     
@@ -101,12 +114,17 @@ def main_cmd(shm_tar, shm_cmd, mutex_tar, mutex_cmd):
         elif n==-2:
             print "Terminated by parent"
             break
-            
+        
+        mutex_eye.acquire()
+        frame = shm_eye.value
+        mutex_eye.release()        
+        
         mutex_tar.acquire()
         pos_ls = shm_tar.value[1]
         mutex_tar.release()
         
-        cmd = behav(pos_ls)
+        corr_pos = convert(pos_ls,frame)      
+        cmd = behav(corr_pos)
         
         mutex_cmd.acquire()
         shm_cmd.value = cmd
