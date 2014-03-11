@@ -42,14 +42,14 @@ def rockandload(fighter):
 	time.sleep(1)
 
 
-def clustering(data,cvImg,nframe,error,K=2):
+def clustering(data,cvImg,nframe,error,K=1):
 	flag1=0
 	flag2=0
 	l0=0
 	l1=0
 	
 	centroid, labels=np.array([]),np.array([])
-	if len(data)>1:
+	if len(data)>0:
 		dataarray = np.asarray(data)
 		centroid, labels = kmeans.kMeans(dataarray, K, maxIters = 20, plot_progress = None)  
 		
@@ -96,7 +96,7 @@ def clustering(data,cvImg,nframe,error,K=2):
 			#print "current error of kmeans = ",pcterror,"%"          	
 	return cvImg,error,centroid, labels
 
-def meet(IP,PORT,fighter):
+def eyefinder(IP,PORT):
 	global motionProxy
 	global post
 	global sonarProxy
@@ -133,7 +133,7 @@ def meet(IP,PORT,fighter):
 	nframe=0.0
 	closing = 3
 	tstp,tu=0,0
-	K=2
+	K=1
 	try:
 		while found:
 			nframe=nframe+1
@@ -148,38 +148,57 @@ def meet(IP,PORT,fighter):
 			# Convert Image to OpenCV
 			cvImg = cv.CreateImageHeader((imageWidth, imageHeight),cv.IPL_DEPTH_8U, 3)
 			cv.SetData(cvImg, pilImg.tostring())
+			cv.CvtColor(cvImg, cvImg, cv.CV_RGB2BGR)
+
 			cvImg2 = cv.CreateImageHeader((imageWidth, imageHeight),cv.IPL_DEPTH_8U, 3)
 			cv.SetData(cvImg2, pilImg.tostring())
-			cv.CvtColor(cvImg, cvImg, cv.CV_RGB2BGR)
+			cv.CvtColor(cvImg2, cvImg, cv.CV_RGB2BGR)
+
 			hsv_img = cv.CreateImage(cv.GetSize(cvImg), 8, 3)
 			cv.CvtColor(cvImg, hsv_img, cv.CV_BGR2HSV)
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			thresholded_img2 =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 
-			imcv2 = cv2.cvtColor(np.asarray(pilImg), cv2.COLOR_RGB2BGR)
 
 
-
-			# Get the orange on the image
-			cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img)
-			cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img2)
-			storage = cv.CreateMemStorage(0)
-			contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
-			cv.Smooth(thresholded_img, thresholded_img, cv.CV_GAUSSIAN, 5, 5)
-			cv.Erode(thresholded_img,thresholded_img, None, closing)
-			cv.Dilate(thresholded_img,thresholded_img, None, closing)
-			
-
-			storage = cv.CreateMemStorage(0)
-			contour = cv.FindContours(thresholded_img, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
+			thresholded1 = cv.CreateImage(cv.GetSize(cvImg), 8, 1)
+			cv.InRangeS(hsv_img, (91, 130, 130), (130, 255, 255), thresholded1)
+			storage2 = cv.CreateMemStorage(0)
+			contour2 = cv.FindContours(thresholded1, storage2, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
 			points = [] 
-
 			d=[]
-			data=[]
-			while contour:			
+			data2=[]
+			while contour2:
 				# Draw bounding rectangles
-				bound_rect = cv.BoundingRect(list(contour))
-				contour = contour.h_next()
+				bound_rect = cv.BoundingRect(list(contour2))
+				contour2 = contour2.h_next()
+				# for more details about cv.BoundingRect,see documentation
+				pt1 = (bound_rect[0], bound_rect[1])
+				pt2 = (bound_rect[0] + bound_rect[2], bound_rect[1] + bound_rect[3])
+				points.append(pt1)
+				points.append(pt2)
+				cv.Rectangle(cvImg, pt1, pt2, cv.CV_RGB(255,0,0), 1)
+				lastx=posx
+				lasty=posy
+				posx=cv.Round((pt1[0]+pt2[0])/2)
+				posy=cv.Round((pt1[1]+pt2[1])/2)
+				data2.append([posx,posy])
+				d.append(math.sqrt(pt1[0]**2+pt2[0]**2))
+				d.append(math.sqrt(pt1[1]**2+pt2[1]**2))
+
+			cvImg,error,centroid1,labels = clustering(data2,cvImg,nframe,error,K=1)
+
+			thresholded2 = cv.CreateImage(cv.GetSize(cvImg), 8, 1)
+			cv.InRangeS(hsv_img, (70, 150, 150), (89, 255, 255), thresholded2)
+			storage2 = cv.CreateMemStorage(0)
+			contour2 = cv.FindContours(thresholded2, storage2, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
+			points = [] 
+			d=[]
+			data2=[]
+			while contour2:
+				# Draw bounding rectangles
+				bound_rect = cv.BoundingRect(list(contour2))
+				contour2 = contour2.h_next()
 				# for more details about cv.BoundingRect,see documentation
 				pt1 = (bound_rect[0], bound_rect[1])
 				pt2 = (bound_rect[0] + bound_rect[2], bound_rect[1] + bound_rect[3])
@@ -190,70 +209,32 @@ def meet(IP,PORT,fighter):
 				lasty=posy
 				posx=cv.Round((pt1[0]+pt2[0])/2)
 				posy=cv.Round((pt1[1]+pt2[1])/2)
-				data.append([posx,posy])
+				data2.append([posx,posy])
 				d.append(math.sqrt(pt1[0]**2+pt2[0]**2))
 				d.append(math.sqrt(pt1[1]**2+pt2[1]**2))
 
-			cvImg2,error,centroid,labels = clustering(data,cvImg2,nframe,error,K)
-			# Update the closing size towards the number of found labels
-			if labels.size<2:
-				closing=1
-			if labels.size<6:
-				closing = 2
-			if labels.size>10:
-				closing=3
-			if closing < 1:
-				closing = 0
-			if centroid.size!=0:
-		
-				uh = 0
-				try:
-					x = int(centroid[0][0])
-					y = int(centroid[0][1])
-				except:
-					print "NaN"
-				l=memoryProxy.getData("Device/SubDeviceList/US/Left/Sensor/Value")
-				r=memoryProxy.getData("Device/SubDeviceList/US/Right/Sensor/Value")
-				# Commande proportionnelles pour le cap et la distance
-				kh = 20.0/(imageWidth/2)
-				km = 0.25
-				uh = -kh*(x - imageWidth/2)
-				um =  km*(math.sqrt(l**2+r**2) - 0.6)
-				if (uh>4 or uh<-4):
-					motionProxy.moveTo(0.0, 0.0, uh*almath.TO_RAD)
-					tu = time.time()
-				if (um>0.03 or um<-0.03) and (l>0.6 and r>0.6):
-					motionProxy.moveTo(um, 0.0, 0.0)
-					tu = time.time()
+			cvImg2,error,centroid2,labels = clustering(data2,cvImg2,nframe,error,K=1)
+			if (len(centroid2)!=0 and len(centroid1)!=0):
+				c1 = centroid1.tolist()[0]
+				c2 = centroid2.tolist()[0]
+				if c1[0]>c2[0]:
+					C = [c1,c2]
 				else:
-					# quand il est proche mettre K=1, on admet qu il n y a plus de parasites, et que les zones oranges sont assez 
-					# grosse pour leur appliquer un coef ce fermeture eleve
-					# print "-------------------------"
-					# print "K = 1"
-					K=1
-					closing = 5
-					tstp = time.time()
-				# print "l",l
-				# print "r",r
-				# print "um ",um	
-				#Temps de repos du Nao
-				tact = tstp - tu
-				#S'il attend plus de 5sec, il admet qu'il est devant sa cible
-				if tact>5:
-					found=False
-					if fighter=="dark":
-						#tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
-						#time.sleep(1.0)
-						tts.say("I see you")
-					if fighter=="obi":
-						#time.sleep(15.0)
-						#tts.say("Only a master of evil, Darth.")
-						tts.say("I see you")
+					C = [c2,c1]
+				print C
+			cv.ShowImage("Blue",cvImg)
+			cv.ShowImage("Green",cvImg2)
+			#cv.ShowImage("Threshold",thresholded_img2)
+			cv.ShowImage("Threshold",thresholded2)
+			cv.WaitKey(1)
 
-				cv.ShowImage("Real",cvImg)
-				#cv.ShowImage("Threshold",thresholded_img2)
-				cv.ShowImage("Threshold",thresholded2)
-				cv.WaitKey(1)
+			
+
+			
+			cv.ShowImage("Real",cvImg)
+			#cv.ShowImage("Threshold",thresholded_img2)
+			cv.ShowImage("Threshold",thresholded2)
+			cv.WaitKey(1)
 
 	except KeyboardInterrupt:
 		print
@@ -317,10 +298,10 @@ def init(IP,PORT):
 
 
 
-def main(IP,PORT,fighter):
+def main_eye(IP,PORT):
 	init(IP,PORT)
 	#rockandload(fighter)
-	meet(IP,PORT,fighter)
+	eyefinder(IP,PORT)
 
 
 if __name__ == "__main__":
@@ -332,5 +313,5 @@ if __name__ == "__main__":
 	if len(sys.argv) > 2:
 		IP = sys.argv[1]
 		fighter = sys.argv[2]
-	main(IP,PORT,fighter)
+	main_eye(IP,PORT)
 	

@@ -16,28 +16,17 @@ import math
 import reset
 import kmeans
 import nao_live
+import sharedMem
+import threading as th
 
 global motionProxy
 global tts
 global post
 global sonarProxy
 global memoryProxy
+global IP
+global PORT
 
-def rockandload(fighter):
-	global motionProxy
-	global post
-	if fighter=="obi":
-		tts.say("I need my blue lightsaber")
-	if fighter=="dark":
-		tts.say("I need my red lightsaber")
-	names  = ["RHand", "LHand"]
-	angles = [1,1]
-	fractionMaxSpeed  = 0.2
-	motionProxy.setAngles(names, angles, fractionMaxSpeed)
-	time.sleep(3)
-	angles = [0.15,0.15]
-	motionProxy.setAngles(names, angles, fractionMaxSpeed)
-	time.sleep(1)
 
 def line_intersection(line1, line2):
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
@@ -56,11 +45,13 @@ def line_intersection(line1, line2):
     return x, y
 
 
-def swordcenterdetection(enemy):
+def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough=50):
 	global motionProxy
 	global post
 	global sonarProxy
 	global memoryProxy
+	global IP
+	global PORT
 	# work ! set current to servos
 	stiffnesses  = 1.0
 	time.sleep(0.5)
@@ -95,15 +86,25 @@ def swordcenterdetection(enemy):
 	cv.MoveWindow("Real",0,0)
 	cv.NamedWindow("Threshold")
 	cv.MoveWindow("Real",imageWidth+100,0)
-	error=0.0
-	nframe=0.0
 	closing = 1
 	tstp,tu=0,0
 	K=2
-	pb = 0.5 # low pass filter value 
+	Mf,Mft = [],[]
+	window = 5 # lenght of the window of observation for the low pass filter 
+	pb = 0.7 # low pass filter value 
+	print "before lines"
 	try:
 		while found:
-			nframe=nframe+1
+			#Synchro
+			mutex_tar.acquire()
+			n = shm_tar.value[0]
+			mutex_tar.release()
+			if n==-1:
+				print "Fail in target mem zone tar. Exit" , n
+				
+			elif n==-2:
+				print "Terminated by parent"
+
 			# Get current image (top cam)
 			naoImage = cameraProxy.getImageRemote(videoClient)
 			# Get the image size and pixel array.
@@ -119,93 +120,56 @@ def swordcenterdetection(enemy):
 			hsv_img = cv.CreateImage(cv.GetSize(cvImg), 8, 3)
 			cv.CvtColor(cvImg, hsv_img, cv.CV_BGR2HSV)
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			thresholded_img2 =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			temp =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			eroded =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			skel = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			img = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			edges = cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
-			# Get the orange on the image
-			cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img)
+			
+			
+			if enemy == "obi":
+				# Get the blue on the image
+				cv.InRangeS(hsv_img, (100, 40, 40), (150, 255, 255), thresholded_img)
+			elif enemy == "dark":
+				# Get the red on the image
+				cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img)
+			else:
+				tts.say("I don't know my enemy")
+
+			# cv.Erode(thresholded_img,thresholded_img, None, closing)
+			# cv.Dilate(thresholded_img,thresholded_img, None, closing)
 			storage = cv.CreateMemStorage(0)
 
-			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_PROBABILISTIC, 1, cv.CV_PI/180, 30, param1=0, param2=0)
-			print lines
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_PROBABILISTIC, 1, cv.CV_PI/180, segHough, param1=0, param2=0)
+			lines_standard = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, segHough, param1=0, param2=0)
+			Theta = []
+			for l in lines_standard:
+				Theta.append(l[1])
+			theta = np.mean(Theta)
+			PTx,PTy,Mftx,Mfty = [],[],[],[]
 
-			first = 1
-			sl=0
-			Mx=[]
-			My=[]
 			for l in lines:
-				sl=sl+1
-			for i in range((sl-1)):
-				l=lines[i]
-				print l
-				rho = l[0]
-				theta = l[1]
-				a = np.cos(theta)
-				b = np.sin(theta)
-				x0 = a*rho
-				y0 = b*rho
-				cf1,cf2  = 300,300
-				# xpt11 = int(cv.Round(x0 + cf1*(-b)))
-				# ypt11 = int(cv.Round(y0 + cf1*(a)))
-				# xpt12 = int(cv.Round(x0 - cf2*(-b)))
-				# ypt12 = int(cv.Round(y0 - cf2*(a)))
-				pt11 = l[0]
-				pt12 = l[1]
-				cv.Line(cvImg, pt11, pt12, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
-
-				l=lines[(i+1)]
-				rho = l[0]
-				theta = l[1]
-				a = np.cos(theta)
-				b = np.sin(theta)
-				x0 = a*rho
-				y0 = b*rho
-				cf1,cf2  = 300,300
-				# xpt1 = int(cv.Round(x0 + cf1*(-b)))
-				# ypt1 = int(cv.Round(y0 + cf1*(a)))
-				# xpt2 = int(cv.Round(x0 - cf2*(-b)))
-				# ypt2 = int(cv.Round(y0 - cf2*(a)))
-
-				# A = np.array(((xpt1,ypt1),(xpt2,ypt2)))
-				# B = np.array(((xpt11,ypt11),(xpt12,ypt12)))
-
-				# try:
-				# 	m = line_intersection(A, B)
-				# 	mx = m[0]
-				# 	my = m[1]
-				# 	Mx.append(mx)
-				# 	My.append(my)
-				# except:
-				# 	error=1 #intersection return False we don't add the point
-
 				pt1 = l[0]
 				pt2 = l[1]
 				cv.Line(cvImg, pt1, pt2, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
-			cMx,cMy=[],[]
-			for x in Mx:
-				cMx.append((1-pb)*x)
-			for y in My:
-				cMy.append((1-pb)*y)
-			try:
-				for i in range(len(cMx)):
-					Mx[i] = cMx[i]+cMtx[i]
-					My[i] = cMy[i]+cMty[i]
-				Mm = (int(np.mean(Mx)),int(np.mean(My)))
-				print "M",Mm
-				cv.Circle(cvImg,Mm,5,(254,0,254),-1)
-			except:
-				error=1 # we are at first iteration
-			cMtx,cMty=[],[]
-			Mtx = Mx
-			Mty = My
-			for x in Mtx:
-				cMtx.append(pb*x)
-			for y in Mty:
-				cMty.append(pb*y)
-			
+				PTx.append(pt1[0])
+				PTx.append(pt2[0])
+				PTy.append(pt1[1])
+				PTy.append(pt2[1])
+			if len(PTx)!=0:	
+				xm = np.mean(PTx)
+				ym = np.mean(PTy)
+				M = (int(xm),int(ym))
+				Mf.append(M)
+				if len(Mf)>window:
+					Mft = Mf[len(Mf)-window:len(Mf)]
+					for m in Mft[0:-2]:
+						Mftx.append(m[0])
+						Mfty.append(m[1])
+					mx = (1-pb)*np.mean(Mftx) + pb*Mftx[-1]
+					my = (1-pb)*np.mean(Mfty) + pb*Mfty[-1]
+					M = (int(mx),int(my))
+					cv.Circle(cvImg,M,5,(254,0,254),-1)
+					#Thread processing
+					mutex_tar.acquire()
+					shm_tar.value = [n,(M[0],M[1],0,theta)]
+					mutex_tar.release()
+
 			cv.ShowImage("Real",cvImg)
 			cv.ShowImage("Threshold",thresholded_img)
 			cv.WaitKey(1)
@@ -233,12 +197,14 @@ def end():
 	cameraProxy.unsubscribe(videoClient)
 	sys.exit(0)
 
-def init(IP,PORT):
+def init():
 	global motionProxy
 	global tts
 	global post
 	global sonarProxy
 	global memoryProxy
+	global IP
+	global PORT
 
 	post = ALProxy("ALRobotPosture", IP, PORT)
 	tts = ALProxy("ALTextToSpeech", IP, PORT)
@@ -246,9 +212,16 @@ def init(IP,PORT):
 	sonarProxy = ALProxy("ALSonar", IP, PORT)
 	sonarProxy.subscribe("myApplication")
 	memoryProxy = ALProxy("ALMemory", IP, PORT)
-	post.goToPosture("Crouch", 1.0)
+	post.goToPosture("StandInit", 1.0)
 	time.sleep(2)
 
+def main(shm_tar, mutex_tar,IPf,enemy):
+	global IP
+	global PORT
+	IP = IPf
+	PORT = 9559
+	init()
+	swordcenterdetection(shm_tar, mutex_tar,enemy)
 
 if __name__ == "__main__":
 	IP = "172.20.12.26"
@@ -259,7 +232,5 @@ if __name__ == "__main__":
 	if len(sys.argv) > 2:
 		IP = sys.argv[1]
 		enemy = sys.argv[2]
-
-	init(IP,PORT)
-	#rockandload(fighter)
-	swordcenterdetection(enemy)
+	main(IP,PORT,enemy)
+	

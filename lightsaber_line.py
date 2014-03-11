@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: quentin
-@descript: We meet again, at last.
+@descript: Draw line along a given saber.
 """
 
 import sys
@@ -129,8 +129,7 @@ def swordcenterdetection(enemy):
 			cv.InRangeS(hsv_img, (110, 80, 80), (150, 200, 200), thresholded_img)
 			storage = cv.CreateMemStorage(0)
 
-			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_PROBABILISTIC, 1, cv.CV_PI/180, 30, param1=0, param2=0)
-			print lines
+			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_STANDARD, 1, cv.CV_PI/180, 100, param1=0, param2=0)
 
 			first = 1
 			sl=0
@@ -140,7 +139,6 @@ def swordcenterdetection(enemy):
 				sl=sl+1
 			for i in range((sl-1)):
 				l=lines[i]
-				print l
 				rho = l[0]
 				theta = l[1]
 				a = np.cos(theta)
@@ -148,12 +146,12 @@ def swordcenterdetection(enemy):
 				x0 = a*rho
 				y0 = b*rho
 				cf1,cf2  = 300,300
-				# xpt11 = int(cv.Round(x0 + cf1*(-b)))
-				# ypt11 = int(cv.Round(y0 + cf1*(a)))
-				# xpt12 = int(cv.Round(x0 - cf2*(-b)))
-				# ypt12 = int(cv.Round(y0 - cf2*(a)))
-				pt11 = l[0]
-				pt12 = l[1]
+				xpt11 = int(cv.Round(x0 + cf1*(-b)))
+				ypt11 = int(cv.Round(y0 + cf1*(a)))
+				xpt12 = int(cv.Round(x0 - cf2*(-b)))
+				ypt12 = int(cv.Round(y0 - cf2*(a)))
+				pt11 = (xpt11,ypt11)
+				pt12 = (xpt12,ypt12)
 				cv.Line(cvImg, pt11, pt12, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
 
 				l=lines[(i+1)]
@@ -164,25 +162,25 @@ def swordcenterdetection(enemy):
 				x0 = a*rho
 				y0 = b*rho
 				cf1,cf2  = 300,300
-				# xpt1 = int(cv.Round(x0 + cf1*(-b)))
-				# ypt1 = int(cv.Round(y0 + cf1*(a)))
-				# xpt2 = int(cv.Round(x0 - cf2*(-b)))
-				# ypt2 = int(cv.Round(y0 - cf2*(a)))
+				xpt1 = int(cv.Round(x0 + cf1*(-b)))
+				ypt1 = int(cv.Round(y0 + cf1*(a)))
+				xpt2 = int(cv.Round(x0 - cf2*(-b)))
+				ypt2 = int(cv.Round(y0 - cf2*(a)))
 
-				# A = np.array(((xpt1,ypt1),(xpt2,ypt2)))
-				# B = np.array(((xpt11,ypt11),(xpt12,ypt12)))
+				A = np.array(((xpt1,ypt1),(xpt2,ypt2)))
+				B = np.array(((xpt11,ypt11),(xpt12,ypt12)))
 
-				# try:
-				# 	m = line_intersection(A, B)
-				# 	mx = m[0]
-				# 	my = m[1]
-				# 	Mx.append(mx)
-				# 	My.append(my)
-				# except:
-				# 	error=1 #intersection return False we don't add the point
+				try:
+					m = line_intersection(A, B)
+					mx = m[0]
+					my = m[1]
+					Mx.append(mx)
+					My.append(my)
+				except:
+					error=1 #intersection return False we don't add the point
 
-				pt1 = l[0]
-				pt2 = l[1]
+				pt1 = (xpt1,ypt1)
+				pt2 = (xpt2,ypt2)
 				cv.Line(cvImg, pt1, pt2, cv.CV_RGB(255,255,255), thickness=1, lineType=8, shift=0)
 			cMx,cMy=[],[]
 			for x in Mx:
