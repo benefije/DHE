@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar  7 15:58:01 2014
+Created on Mon Mar  10 2014
 
-@author: jibi
+@author: quentin
 
-Controller for tests on movSword.py
+Controller for tests on lightsaber_segment.py
 """
 
 import threading as th
@@ -22,7 +22,7 @@ def main(robotIp,enemy):
         mutex_pos.acquire()
         c = pos.value
         mutex_pos.release()
-        print "pos in mutex ",c
+        print "vision: ",c
         time.sleep(2)
 
 

@@ -121,10 +121,18 @@ def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough
 			cv.CvtColor(cvImg, hsv_img, cv.CV_BGR2HSV)
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			
-			# Get the blue on the image
-			cv.InRangeS(hsv_img, (110, 80, 80), (140, 255, 255), thresholded_img)
-			cv.Erode(thresholded_img,thresholded_img, None, closing)
-			cv.Dilate(thresholded_img,thresholded_img, None, closing)
+			
+			if enemy == "obi":
+				# Get the blue on the image
+				cv.InRangeS(hsv_img, (100, 40, 40), (150, 255, 255), thresholded_img)
+			elif enemy == "dark":
+				# Get the red on the image
+				cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img)
+			else:
+				tts.say("I don't know my enemy")
+
+			# cv.Erode(thresholded_img,thresholded_img, None, closing)
+			# cv.Dilate(thresholded_img,thresholded_img, None, closing)
 			storage = cv.CreateMemStorage(0)
 
 			lines = cv.HoughLines2(thresholded_img, storage, cv.CV_HOUGH_PROBABILISTIC, 1, cv.CV_PI/180, segHough, param1=0, param2=0)
@@ -133,7 +141,6 @@ def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough
 			for l in lines_standard:
 				Theta.append(l[1])
 			theta = np.mean(Theta)
-			sl=0
 			PTx,PTy,Mftx,Mfty = [],[],[],[]
 
 			for l in lines:
@@ -158,7 +165,7 @@ def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough
 					my = (1-pb)*np.mean(Mfty) + pb*Mfty[-1]
 					M = (int(mx),int(my))
 					cv.Circle(cvImg,M,5,(254,0,254),-1)
-
+					#Thread processing
 					mutex_tar.acquire()
 					shm_tar.value = [n,(M[0],M[1],0,theta)]
 					mutex_tar.release()

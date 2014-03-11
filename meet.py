@@ -22,6 +22,8 @@ global tts
 global post
 global sonarProxy
 global memoryProxy
+global cameraProxy
+global videoClient
 
 def rockandload(fighter):
 	global motionProxy
@@ -94,30 +96,24 @@ def clustering(data,cvImg,nframe,error,K=2):
 			#print "current error of kmeans = ",pcterror,"%"          	
 	return cvImg,error,centroid, labels
 
-def meet(fighter):
+def meet(IP,PORT,fighter):
 	global motionProxy
 	global post
 	global sonarProxy
 	global memoryProxy
+	global cameraProxy
+	global videoClient
 	# work ! set current to servos
 	stiffnesses  = 1.0
 	time.sleep(0.5)
 
-	# init video
-	cameraProxy = ALProxy("ALVideoDevice", IP, PORT)
-	resolution = 0    # 0 : QQVGA, 1 : QVGA, 2 : VGA
-	colorSpace = 11   # RGB
-	camNum = 0 # 0:top cam, 1: bottom cam
-	fps = 1; # frame Per Second
-	cameraProxy.setParam(18, camNum)
-	try:
-		videoClient = cameraProxy.subscribe("python_client", 
-														resolution, colorSpace, fps)
-	except:
-		cameraProxy.unsubscribe("python_client")
-		videoClient = cameraProxy.subscribe("python_client", 
-														resolution, colorSpace, fps)
-	print "Start videoClient: ",videoClient
+	# TEMP
+	pNames = "Body"
+	pStiffnessLists = 0.0
+	pTimeLists = 1.0
+	motionProxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
+
+	
 	# Get a camera image.
 	# image[6] contains the image data passed as an array of ASCII chars.
 	naoImage = cameraProxy.getImageRemote(videoClient)
@@ -157,6 +153,11 @@ def meet(fighter):
 			cv.CvtColor(cvImg, hsv_img, cv.CV_BGR2HSV)
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			thresholded_img2 =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
+
+			imcv2 = cv2.cvtColor(np.asarray(pilImg), cv2.COLOR_RGB2BGR)
+
+
+
 			# Get the orange on the image
 			cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img)
 			cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img2)
@@ -230,35 +231,53 @@ def meet(fighter):
 					K=1
 					closing = 5
 					tstp = time.time()
-				print "l",l
-				print "r",r
-				print "um ",um	
+				# print "l",l
+				# print "r",r
+				# print "um ",um	
 				#Temps de repos du Nao
 				tact = tstp - tu
 				#S'il attend plus de 5sec, il admet qu'il est devant sa cible
-				if tact>5:
-					found=False
-					if fighter=="dark":
-						tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
-						time.sleep(1.0)
-					if fighter=="obi":
-						time.sleep(15.0)
-						tts.say("Only a master of evil, Darth.")
+				if 1:
+					#found=False
+					# if fighter=="dark":
+					# 	#tts.say("I've been waiting for you, Obi-Wan. We meet again, at last. The circle is now complete. When I left you, I was but the learner; now I am the master.")
+					# 	#time.sleep(1.0)
+					# 	tts.say("I see you")
+					# if fighter=="obi":
+					# 	#time.sleep(15.0)
+					# 	#tts.say("Only a master of evil, Darth.")
+					# 	tts.say("I see you")
 
-			cv.ShowImage("Real",cvImg)
-			cv.ShowImage("Threshold",thresholded_img2)
-			cv.WaitKey(1)
+					cimghsv = cv2.cvtColor(imcv2,cv2.COLOR_BGR2HSV)
+					cimg = cv2.inRange(cimghsv,np.array([80, 100, 100],dtype=np.uint8), np.array([120, 230, 230],dtype=np.uint8))
+					circles = cv2.HoughCircles(cimg, cv.CV_HOUGH_GRADIENT, 1, 20, np.array([]), 10, 30, 0, 200)
+					print circles
+					try:
+						a, b, c = circles.shape
+						for i in range(b):			
+							print "coucou" 
+							cv2.circle(imcv2, (circles[0][i][0], circles[0][i][1]), circles[0][i][2], (0, 0, 255), 3, cv.LINE_AA)
+							cv2.circle(imcv2, (circles[0][i][0], circles[0][i][1]), 2, (0, 255, 0), 3, cv.LINE_AA) # draw center of circle
+					except:
+						perror = "NoneType"
+					cv2.imshow("Real2",imcv2)
+
+				cv.ShowImage("Real",cvImg)
+				#cv.ShowImage("Threshold",thresholded_img2)
+				cv2.imshow("Threshold",cimg)
+				cv.WaitKey(1)
 
 	except KeyboardInterrupt:
 		print
 		print "Interrupted by user, shutting down" 
-		end()
+		end(IP,PORT)
 
-def end():
+def end(IP,PORT):
 	global motionProxy
-	global post
 	global sonarProxy
 	global memoryProxy
+	global post
+	global cameraProxy
 	pNames = "Body"
 	post.goToPosture("Crouch", 1.0)
 	time.sleep(1.0)
@@ -278,15 +297,42 @@ def init(IP,PORT):
 	global post
 	global sonarProxy
 	global memoryProxy
+	global cameraProxy
+	global videoClient
+
 
 	post = ALProxy("ALRobotPosture", IP, PORT)
 	tts = ALProxy("ALTextToSpeech", IP, PORT)
 	motionProxy = ALProxy("ALMotion", IP, PORT)
+	cameraProxy = ALProxy("ALVideoDevice", IP, PORT)
+	# init video
+	resolution = 0    # 0 : QQVGA, 1 : QVGA, 2 : VGA
+	colorSpace = 11   # RGB
+	camNum = 0 # 0:top cam, 1: bottom cam
+	fps = 1; # frame Per Second
+	cameraProxy.setParam(18, camNum)
+	try:
+		videoClient = cameraProxy.subscribe("python_client", 
+														resolution, colorSpace, fps)
+	except:
+		cameraProxy.unsubscribe("python_client")
+		videoClient = cameraProxy.subscribe("python_client", 
+														resolution, colorSpace, fps)
+	print "Start videoClient: ",videoClient
 	sonarProxy = ALProxy("ALSonar", IP, PORT)
 	sonarProxy.subscribe("myApplication")
 	memoryProxy = ALProxy("ALMemory", IP, PORT)
-	post.goToPosture("StandInit", 1.0)
+
+	post.goToPosture("Crouch", 1.0)
 	time.sleep(2)
+
+
+
+
+def main(IP,PORT,fighter):
+	init(IP,PORT)
+	#rockandload(fighter)
+	meet(IP,PORT,fighter)
 
 
 if __name__ == "__main__":
@@ -298,7 +344,5 @@ if __name__ == "__main__":
 	if len(sys.argv) > 2:
 		IP = sys.argv[1]
 		fighter = sys.argv[2]
+	main(IP,PORT,fighter)
 	
-	init(IP,PORT)
-	rockandload(fighter)
-	meet(fighter)
