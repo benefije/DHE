@@ -166,6 +166,10 @@ def eyefinder(shm_tar, mutex_tar,IP,PORT,fighter):
 			thresholded_img =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 			thresholded_img2 =  cv.CreateImage(cv.GetSize(hsv_img), 8, 1)
 
+			cvImg2 = cv.CreateImageHeader((imageWidth, imageHeight),cv.IPL_DEPTH_8U, 3)
+			cv.SetData(cvImg2, pilImg.tostring())
+			cv.CvtColor(cvImg2, cvImg, cv.CV_RGB2BGR)
+
 
 
 			thresholded1 = cv.CreateImage(cv.GetSize(cvImg), 8, 1)

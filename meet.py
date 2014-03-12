@@ -108,10 +108,10 @@ def meet(IP,PORT,fighter):
 	time.sleep(0.5)
 
 	# TEMP
-	pNames = "Body"
-	pStiffnessLists = 0.0
-	pTimeLists = 1.0
-	motionProxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
+	# pNames = "Body"
+	# pStiffnessLists = 0.0
+	# pTimeLists = 1.0
+	# motionProxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
 
 	
 	# Get a camera image.
@@ -128,7 +128,7 @@ def meet(IP,PORT,fighter):
 	cv.NamedWindow("Real")
 	cv.MoveWindow("Real",0,0)
 	cv.NamedWindow("Threshold")
-	cv.MoveWindow("Real",imageWidth+100,0)
+	cv.MoveWindow("Threshold",imageWidth+100,0)
 	error=0.0
 	nframe=0.0
 	closing = 3
@@ -185,7 +185,7 @@ def meet(IP,PORT,fighter):
 				pt2 = (bound_rect[0] + bound_rect[2], bound_rect[1] + bound_rect[3])
 				points.append(pt1)
 				points.append(pt2)
-				cv.Rectangle(cvImg2, pt1, pt2, cv.CV_RGB(255,0,0), 1)
+				cv.Rectangle(cvImg, pt1, pt2, cv.CV_RGB(255,0,0), 1)
 				lastx=posx
 				lasty=posy
 				posx=cv.Round((pt1[0]+pt2[0])/2)
@@ -194,7 +194,7 @@ def meet(IP,PORT,fighter):
 				d.append(math.sqrt(pt1[0]**2+pt2[0]**2))
 				d.append(math.sqrt(pt1[1]**2+pt2[1]**2))
 
-			cvImg2,error,centroid,labels = clustering(data,cvImg2,nframe,error,K)
+			cvImg,error,centroid,labels = clustering(data,cvImg,nframe,error,K)
 			# Update the closing size towards the number of found labels
 			if labels.size<2:
 				closing=1
@@ -238,7 +238,7 @@ def meet(IP,PORT,fighter):
 				# print "um ",um	
 				#Temps de repos du Nao
 				tact = tstp - tu
-				#S'il attend plus de 5sec, il admet qu'il est devant sa cible
+				S'il attend plus de 5sec, il admet qu'il est devant sa cible
 				if tact>5:
 					found=False
 					if fighter=="dark":
@@ -251,8 +251,8 @@ def meet(IP,PORT,fighter):
 						tts.say("I see you")
 
 				cv.ShowImage("Real",cvImg)
-				#cv.ShowImage("Threshold",thresholded_img2)
-				cv.ShowImage("Threshold",thresholded2)
+				cv.ShowImage("Threshold",thresholded_img2)
+				#cv.ShowImage("Threshold",thresholded2)
 				cv.WaitKey(1)
 
 	except KeyboardInterrupt:
@@ -294,7 +294,7 @@ def init(IP,PORT):
 	motionProxy = ALProxy("ALMotion", IP, PORT)
 	cameraProxy = ALProxy("ALVideoDevice", IP, PORT)
 	# init video
-	resolution = 0    # 0 : QQVGA, 1 : QVGA, 2 : VGA
+	resolution = 1    # 0 : QQVGA, 1 : QVGA, 2 : VGA
 	colorSpace = 11   # RGB
 	camNum = 0 # 0:top cam, 1: bottom cam
 	fps = 1; # frame Per Second
@@ -311,7 +311,7 @@ def init(IP,PORT):
 	sonarProxy.subscribe("myApplication")
 	memoryProxy = ALProxy("ALMemory", IP, PORT)
 
-	post.goToPosture("Crouch", 1.0)
+	post.goToPosture("StandInit", 1.0)
 	time.sleep(2)
 
 

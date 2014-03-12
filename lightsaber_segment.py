@@ -124,7 +124,7 @@ def swordcenterdetection(shm_tar, mutex_tar,enemy="obi",window=5,pb=0.7,segHough
 			
 			if enemy == "obi":
 				# Get the blue on the image
-				cv.InRangeS(hsv_img, (100, 40, 40), (150, 255, 255), thresholded_img)
+				cv.InRangeS(hsv_img, (100, 40, 40), (150, 150, 150), thresholded_img)
 			elif enemy == "dark":
 				# Get the red on the image
 				cv.InRangeS(hsv_img, (0, 150, 150), (40, 255, 255), thresholded_img)

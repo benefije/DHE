@@ -27,8 +27,8 @@ def main(robotIp,enemy):
 
 
 if __name__ == "__main__":    
-    robotIp = "172.20.10.90"
-    
+    robotIp = "172.20.11.131"
+    enemy = "dark"
     if len(sys.argv) > 1:
         robotIp         = sys.argv[1]
     if len(sys.argv) > 2:
